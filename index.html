@@ -814,6 +814,8 @@
     </div>
   </div>
 
+  </div> <!-- end normal-dashboard -->
+
   </div> <!-- end tab-dashboard -->
 
   <!-- Preisanpassungen Tab -->
@@ -855,8 +857,8 @@
       <div id="page-info">Zeige 1–25 von 324</div>
       <div class="page-btns" id="pageBtns"></div>
     </div>
-  </div>
-    </div>
+    </div><!-- end table-wrap -->
+    </div><!-- end normal-preis-panel -->
 
     <!-- Cube Preisanalyse Panel -->
     <div id="cube-panel" style="display:none;">
@@ -1344,6 +1346,14 @@ function checkPw() {
     setTimeout(function() { inp.classList.remove('shake'); err.textContent = ''; }, 1000);
   }
 }
+
+window.onerror = function(msg, src, line, col, err) {
+  var d = document.createElement('div');
+  d.style.cssText = 'position:fixed;top:10px;left:50%;transform:translateX(-50%);background:#c0392b;color:#fff;padding:12px 20px;border-radius:8px;z-index:99999;font-size:13px;max-width:600px;';
+  d.textContent = 'JS Error: ' + msg + ' (line ' + line + ')';
+  document.body.appendChild(d);
+  return false;
+};
 
 window.addEventListener('load', function() {
   setTimeout(function() {
