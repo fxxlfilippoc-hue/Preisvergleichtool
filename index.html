@@ -667,8 +667,7 @@
   <!-- Dashboard Tab -->
   <div id="tab-dashboard" class="tab-panel active">
 
-    <!-- Normal Dashboard (Fahrräder / Zubehör) -->
-    <div id="normal-dashboard">
+  <div id="normal-dashboard">
       <!-- KPI Row -->
   <p class="section-title">Übersicht</p>
   <div class="kpi-grid">
@@ -814,124 +813,15 @@
       </div>
     </div>
   </div>
-    </div>
-
-    <!-- Cube Preisanalyse (nur wenn Cube gewählt) -->
-    <!-- CUBE EXTENDED PANEL (nur sichtbar wenn cube gewählt) -->
-  <div id="cube-panel" style="display:none;">
-    <p class="section-title" style="margin-top:1.5rem;">Cube Preisanalyse</p>
-
-    <!-- Filter Bar -->
-    <div class="cube-filters">
-      <div class="fg"><label>Suche</label><input type="text" id="ovSearch" placeholder="Produktname..." oninput="cubeApplyFilters()"></div>
-      <div class="fg"><label>Season</label><select id="ovSeason" onchange="cubeApplyFilters()"><option value="">Alle</option></select></div>
-      <div class="fg"><label>Status</label>
-        <select id="ovStatus" onchange="cubeApplyFilters()">
-          <option value="">Alle</option>
-          <option value="kritisch">🔴 Kritisch</option>
-          <option value="marge">🟡 Marge verschenkt</option>
-          <option value="optimal">🟢 Optimal</option>
-          <option value="nc">⚫ Nicht wettbewerbsfähig</option>
-        </select>
-      </div>
-      <div class="fg"><label>Empfehlung</label>
-        <select id="ovAction" onchange="cubeApplyFilters()">
-          <option value="">Alle</option>
-          <option value="reduce">↓ Preis senken</option>
-          <option value="keep">↔ Preis lassen</option>
-          <option value="raise">↑ Preis erhöhen</option>
-        </select>
-      </div>
-      <div class="fg"><label>Günstigster Shop</label><select id="ovShop" onchange="cubeApplyFilters()"><option value="">Alle</option></select></div>
-      <div class="fg">
-        <label>Preisindex</label>
-        <select id="ovIndex" onchange="cubeApplyFilters()">
-          <option value="">Alle</option>
-          <option value="over">Über 105% (teuer)</option>
-          <option value="ok">97–105% (ok)</option>
-          <option value="under">Unter 97% (günstig)</option>
-        </select>
-      </div>
-      <div class="filter-actions">
-        <button class="pill" onclick="cubeClearFilters()" style="height:32px;">Zurücksetzen</button>
-      </div>
-    </div>
-    <!-- Preisstrategie -->
-    <div class="cube-filters" style="margin-top:-0.5rem;background:var(--blue-soft);border-color:rgba(24,95,165,0.2);">
-      <span style="font-size:11px;font-weight:600;color:var(--blue);width:100%;margin-bottom:2px;">🎯 Preisstrategie — wähle oben eine Season aus damit die Strategie greift</span>
-      <div class="fg">
-        <label>Max. Rabatt auf UVP</label>
-        <select id="stratDiscount" onchange="cubeApplyFilters()">
-          <option value="30">Standard (30%)</option>
-          <option value="0">0% — kein Rabatt</option>
-          <option value="5">5%</option>
-          <option value="10">10%</option>
-          <option value="15">15%</option>
-          <option value="20">20%</option>
-          <option value="25">25%</option>
-        </select>
-      </div>
-      <div style="font-size:11px;color:var(--amber);align-self:center;" id="stratInfo">⚠️ Bitte oben eine Season auswählen damit die Strategie greift.</div>
-    </div>
-
-    <div id="ovActiveTags" class="active-filters" style="display:none;"></div>
-
-    <!-- KPI Row -->
-    <div class="cube-kpi-row" id="kpiRow"></div>
-
-    <!-- Insights Grid -->
-    <div class="cube-insights">
-      <div class="cube-card">
-        <div class="cube-card-header">🔴 Top 5 Kritischste Produkte</div>
-        <div class="cube-card-body"><div id="insightCritical"></div><div class="summary-bar" id="summaryBar"></div></div>
-      </div>
-      <div class="cube-card">
-        <div class="cube-card-header">📊 Statusverteilung</div>
-        <div class="cube-card-body" style="display:flex;align-items:center;gap:16px;">
-          <canvas id="statusChart" width="140" height="140" style="flex-shrink:0;"></canvas>
-          <div id="chartLegend" style="font-size:12px;line-height:2;flex:1;"></div>
-        </div>
-      </div>
-      <div class="cube-card">
-        <div class="cube-card-header">🟡 Top 5 Preiserhöhungs-Chancen</div>
-        <div class="cube-card-body"><div id="insightMarge"></div></div>
-      </div>
-      <div class="cube-card" style="grid-column:1/-1;">
-        <div class="cube-card-header">📅 Analyse nach Season</div>
-        <div class="cube-card-body"><div id="insightSeason"></div></div>
-      </div>
-    </div>
-
-    <!-- Cube Tabelle -->
-    <div class="cube-table-wrap">
-      <div class="cube-table-header">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <span style="font-size:13px;font-weight:500;">Preistabelle</span>
-          <span style="font-size:11px;color:var(--muted);" id="cubeRowCount"></span>
-        </div>
-        <button class="pill" onclick="cubeDownloadCSV()">CSV Export</button>
-      </div>
-      <div style="overflow-x:auto;">
-        <table style="width:100%;border-collapse:collapse;font-size:12px;">
-          <thead>
-            <tr id="cubeTableHead"></tr>
-          </thead>
-          <tbody id="cubeTableBody"></tbody>
-        </table>
-      </div>
-      <div class="pagination">
-        <div id="cubePageInfo">–</div>
-        <div class="page-btns" id="cubePageBtns"></div>
-      </div>
-    </div>
-  </div>
 
   </div> <!-- end tab-dashboard -->
 
   <!-- Preisanpassungen Tab -->
   <div id="tab-preisanpassungen" class="tab-panel">
 
-  <!-- Product Table -->
+    <!-- Normal: Nicht auf Platz 1 (Fahrräder / Zubehör) -->
+    <div id="normal-preis-panel">
+      <!-- Product Table -->
   <div class="table-wrap">
     <div class="table-header">
       <div style="display:flex;align-items:center;gap:10px;">
@@ -966,6 +856,115 @@
       <div class="page-btns" id="pageBtns"></div>
     </div>
   </div>
+    </div>
+
+    <!-- Cube Preisanalyse Panel -->
+    <div id="cube-panel" style="display:none;">
+      <p class="section-title" style="margin-top:0.5rem;">Cube Preisanalyse</p>
+
+      <!-- Filter Bar -->
+      <div class="cube-filters">
+        <div class="fg"><label>Suche</label><input type="text" id="ovSearch" placeholder="Produktname..." oninput="cubeApplyFilters()"></div>
+        <div class="fg"><label>Season</label><select id="ovSeason" onchange="cubeApplyFilters()"><option value="">Alle</option></select></div>
+        <div class="fg"><label>Status</label>
+          <select id="ovStatus" onchange="cubeApplyFilters()">
+            <option value="">Alle</option>
+            <option value="kritisch">🔴 Kritisch</option>
+            <option value="marge">🟡 Marge verschenkt</option>
+            <option value="optimal">🟢 Optimal</option>
+            <option value="nc">⚫ Nicht wettbewerbsfähig</option>
+          </select>
+        </div>
+        <div class="fg"><label>Empfehlung</label>
+          <select id="ovAction" onchange="cubeApplyFilters()">
+            <option value="">Alle</option>
+            <option value="reduce">↓ Preis senken</option>
+            <option value="keep">↔ Preis lassen</option>
+            <option value="raise">↑ Preis erhöhen</option>
+          </select>
+        </div>
+        <div class="fg"><label>Günstigster Shop</label><select id="ovShop" onchange="cubeApplyFilters()"><option value="">Alle</option></select></div>
+        <div class="fg">
+          <label>Preisindex</label>
+          <select id="ovIndex" onchange="cubeApplyFilters()">
+            <option value="">Alle</option>
+            <option value="over">Über 105% (teuer)</option>
+            <option value="ok">97–105% (ok)</option>
+            <option value="under">Unter 97% (günstig)</option>
+          </select>
+        </div>
+        <div class="filter-actions">
+          <button class="pill" onclick="cubeClearFilters()" style="height:32px;">Zurücksetzen</button>
+        </div>
+      </div>
+
+      <div id="ovActiveTags" class="active-filters" style="display:none;"></div>
+
+      <!-- KPI Row -->
+      <div class="cube-kpi-row" id="kpiRow"></div>
+
+      <!-- Insights Grid -->
+      <div class="cube-insights">
+        <div class="cube-card">
+          <div class="cube-card-header">🔴 Top 5 Kritischste Produkte</div>
+          <div class="cube-card-body"><div id="insightCritical"></div><div class="summary-bar" id="summaryBar"></div></div>
+        </div>
+        <div class="cube-card">
+          <div class="cube-card-header">📊 Statusverteilung</div>
+          <div class="cube-card-body" style="display:flex;align-items:center;gap:16px;">
+            <canvas id="statusChart" width="140" height="140" style="flex-shrink:0;"></canvas>
+            <div id="chartLegend" style="font-size:12px;line-height:2;flex:1;"></div>
+          </div>
+        </div>
+        <div class="cube-card">
+          <div class="cube-card-header">🟡 Top 5 Preiserhöhungs-Chancen</div>
+          <div class="cube-card-body"><div id="insightMarge"></div></div>
+        </div>
+        <div class="cube-card" style="grid-column:1/-1;">
+          <div class="cube-card-header">📅 Analyse nach Season</div>
+          <div class="cube-card-body"><div id="insightSeason"></div></div>
+        </div>
+      </div>
+
+      <!-- Preisstrategie (direkt über Tabelle) -->
+      <div class="cube-filters" style="margin-top:0.5rem;background:var(--blue-soft);border-color:rgba(24,95,165,0.2);">
+        <span style="font-size:11px;font-weight:600;color:var(--blue);width:100%;margin-bottom:2px;">🎯 Preisstrategie — wähle oben eine Season aus damit die Strategie greift</span>
+        <div class="fg">
+          <label>Max. Rabatt auf UVP</label>
+          <select id="stratDiscount" onchange="cubeApplyFilters()">
+            <option value="30">Standard (30%)</option>
+            <option value="0">0% — kein Rabatt</option>
+            <option value="5">5%</option>
+            <option value="10">10%</option>
+            <option value="15">15%</option>
+            <option value="20">20%</option>
+            <option value="25">25%</option>
+          </select>
+        </div>
+        <div style="font-size:11px;color:var(--amber);align-self:center;" id="stratInfo">⚠️ Bitte oben eine Season auswählen damit die Strategie greift.</div>
+      </div>
+
+      <!-- Cube Tabelle -->
+      <div class="cube-table-wrap">
+        <div class="cube-table-header">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:13px;font-weight:500;">Preistabelle</span>
+            <span style="font-size:11px;color:var(--muted);" id="cubeRowCount"></span>
+          </div>
+          <button class="pill" onclick="cubeDownloadCSV()">CSV Export</button>
+        </div>
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead><tr id="cubeTableHead"></tr></thead>
+            <tbody id="cubeTableBody"></tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <div id="cubePageInfo">–</div>
+          <div class="page-btns" id="cubePageBtns"></div>
+        </div>
+      </div>
+    </div><!-- end cube-panel -->
 
   </div> <!-- end tab-preisanpassungen -->
 
@@ -1851,16 +1850,16 @@ function cubeDownloadCSV(){
   a.click();
 }
 
-// ── Toggle zwischen Normal-Dashboard und Cube Preisanalyse ──
+// ── Toggle: Preisanpassungen zeigt Cube oder Normal ──
 function toggleCubePanel(isCube){
-  var normalDash = document.getElementById('normal-dashboard');
-  var cubePanel  = document.getElementById('cube-panel');
+  var normalPreis = document.getElementById('normal-preis-panel');
+  var cubePanel   = document.getElementById('cube-panel');
   if(isCube){
-    normalDash.style.display = 'none';
-    cubePanel.style.display  = 'block';
+    if(normalPreis) normalPreis.style.display = 'none';
+    if(cubePanel)   cubePanel.style.display   = 'block';
   } else {
-    normalDash.style.display = 'block';
-    cubePanel.style.display  = 'none';
+    if(normalPreis) normalPreis.style.display = 'block';
+    if(cubePanel)   cubePanel.style.display   = 'none';
   }
 }
 
