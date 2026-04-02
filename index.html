@@ -840,9 +840,35 @@
         </select>
       </div>
       <div class="fg"><label>Günstigster Shop</label><select id="ovShop" onchange="cubeApplyFilters()"><option value="">Alle</option></select></div>
+      <div class="fg">
+        <label>Preisindex</label>
+        <select id="ovIndex" onchange="cubeApplyFilters()">
+          <option value="">Alle</option>
+          <option value="over">Über 105% (teuer)</option>
+          <option value="ok">97–105% (ok)</option>
+          <option value="under">Unter 97% (günstig)</option>
+        </select>
+      </div>
       <div class="filter-actions">
         <button class="pill" onclick="cubeClearFilters()" style="height:32px;">Zurücksetzen</button>
       </div>
+    </div>
+    <!-- Preisstrategie -->
+    <div class="cube-filters" style="margin-top:-0.5rem;background:var(--blue-soft);border-color:rgba(24,95,165,0.2);">
+      <span style="font-size:11px;font-weight:600;color:var(--blue);width:100%;margin-bottom:2px;">🎯 Preisstrategie — wähle oben eine Season aus damit die Strategie greift</span>
+      <div class="fg">
+        <label>Max. Rabatt auf UVP</label>
+        <select id="stratDiscount" onchange="cubeApplyFilters()">
+          <option value="30">Standard (30%)</option>
+          <option value="0">0% — kein Rabatt</option>
+          <option value="5">5%</option>
+          <option value="10">10%</option>
+          <option value="15">15%</option>
+          <option value="20">20%</option>
+          <option value="25">25%</option>
+        </select>
+      </div>
+      <div style="font-size:11px;color:var(--amber);align-self:center;" id="stratInfo">⚠️ Bitte oben eine Season auswählen damit die Strategie greift.</div>
     </div>
 
     <div id="ovActiveTags" class="active-filters" style="display:none;"></div>
@@ -1402,6 +1428,13 @@ function cubeCalcCluster(c, minAllowed, uvp){
   return{targetPrice:targetPrice,newDiscount:newDiscount,status:status,potential:potential,action:action,ncFlag:ncFlag};
 }
 
+function cubeExtractProductName(label){
+  // Strip color and "Modell XXXX" suffix to get clean product name for clustering
+  var name = label.replace(/\s+(Schwarz|Weiss|Weiß|Grau|Grün|Blau|Rot|Silber|Lila|Braun|Orange|Gelb|Rosa|Pink|Beige|Gold|Mint|Türkis|Teal|Oliv|Violet|Carbon|Flash|Petrol|Berry|Lightblue|Lightgrey|Darkgrey|Nude|Sand|Coral|Cream|White|Black|Grey|Green|Blue|Red|Purple|Yellow)\b.*/i, '');
+  name = name.replace(/\s+Modell.*$/i, '');
+  return name.trim();
+}
+
 function cubeBuildDashboard(data){
   if(!data||!data.length) return;
   debugIssues=[];
@@ -1411,85 +1444,158 @@ function cubeBuildDashboard(data){
   var colUVP       = cubeFindCol(keys,[/^uvp$/i]);
   var colSKU       = cubeFindCol(keys,[/^sku$/i]);
   var colMinPreis  = cubeFindCol(keys,[/günstigster.?preis/i,/min.?preis/i]);
-  var colShop      = cubeFindCol(keys,[/günstigster.?anbieter/i,/shop/i]);
-  var colDiff      = cubeFindCol(keys,[/differenz/i]);
-  var colPos       = cubeFindCol(keys,[/meine.?position/i]);
+  var colShop      = cubeFindCol(keys,[/günstigster.?anbieter/i]);
   var colPreisvor  = cubeFindCol(keys,[/preisvorschlag$/i]);
+  var colBenutzerd = cubeFindCol(keys,[/benutzerdefiniert/i]);
 
-  // Group by Artikelbezeichnung + Season → Cluster
-  var clusterMap={};
+  var clusterMap = {};
+
   data.forEach(function(r){
-    var name   = r[colArtikel]||'';
-    var season = cubeExtractSeason(name);
-    var key    = name+'__'+season;
+    var label    = (r[colArtikel]||'').trim();
+    var pName    = cubeExtractProductName(label);   // Farbe + "Modell" entfernt
+    var season   = cubeExtractSeason(label);
+    var key      = pName + '||' + season;
+    var shop     = (r[colShop]||'').trim();
+    var sku      = colSKU ? (r[colSKU]||'').trim() : '';
+    var benutzerd= colBenutzerd ? (r[colBenutzerd]||'').trim() : '';
+
     if(!clusterMap[key]) clusterMap[key]={
-      key:key, name:name, season:season,
-      myPrice:null, uvp:null, minPrice:null, avgMarket:null,
-      shops:[], prices:[], sku:'', preisvorschlag:null,
-      distAbs:null, priceIndex:null, ranking:null
+      key:key, name:pName, season:season,
+      myPrice:null, uvp:null,
+      skus:[], modellnummern:[], seenSkus:{},
+      marketPrices:[], shops:[],
+      preisvorschlag:null, distAbs:null, priceIndex:null
     };
-    var c=clusterMap[key];
-    var mp=cubeParsePrice(r[colMeinPreis]);
-    if(mp!==null) c.myPrice=mp;
-    var uvp=cubeParsePrice(r[colUVP]);
-    if(uvp!==null) c.uvp=uvp;
-    var minp=cubeParsePrice(r[colMinPreis]);
-    if(minp!==null&&(c.minPrice===null||minp<c.minPrice)) c.minPrice=minp;
-    var shop=r[colShop]||'';
-    if(shop&&c.shops.indexOf(shop)<0) c.shops.push(shop);
-    if(minp!==null) c.prices.push(minp);
-    if(!c.sku&&r[colSKU]) c.sku=r[colSKU];
-    var pv=cubeParsePrice(r[colPreisvor]);
-    if(pv!==null) c.preisvorschlag=pv;
+    var c = clusterMap[key];
+
+    var mp  = cubeParsePrice(r[colMeinPreis]);
+    var uvp = cubeParsePrice(r[colUVP]);
+    var minp= cubeParsePrice(r[colMinPreis]);
+    var pv  = colPreisvor ? cubeParsePrice(r[colPreisvor]) : null;
+
+    // Take highest Mein Preis across SKUs (same product, different sizes)
+    if(mp!==null && (c.myPrice===null || mp > c.myPrice)) c.myPrice = mp;
+    if(uvp!==null && !c.uvp) c.uvp = uvp;
+    if(pv!==null) c.preisvorschlag = pv;
+
+    // Track unique SKUs + Modellnummern
+    if(sku && !c.seenSkus[sku]){
+      c.seenSkus[sku] = true;
+      c.skus.push(sku);
+    }
+    if(benutzerd && c.modellnummern.indexOf(benutzerd)<0) c.modellnummern.push(benutzerd);
+
+    // Market prices from competitor
+    if(minp!==null){
+      c.marketPrices.push({price:minp, shop:shop});
+      if(shop && c.shops.indexOf(shop)<0) c.shops.push(shop);
+    }
   });
 
-  allClusters=Object.values(clusterMap);
-
-  // Compute market avg per cluster
-  allClusters.forEach(function(c){
-    if(c.prices.length>0) c.avgMarket=c.prices.reduce(function(a,b){return a+b;},0)/c.prices.length;
-    if(c.myPrice!==null&&c.avgMarket) c.priceIndex=c.myPrice/c.avgMarket*100;
-    if(c.myPrice!==null&&c.minPrice!==null) c.distAbs=c.myPrice-c.minPrice;
-    c.ranking=c.shops.length>0?1:null;
-    var minAllowed=c.uvp?c.uvp*0.70:null;
-    var calc=cubeCalcCluster(c, minAllowed, c.uvp);
-    c.targetPrice=calc.targetPrice;
-    c.newDiscount=calc.newDiscount;
-    c.status=calc.status;
-    c.potential=calc.potential;
-    c.action=calc.action;
-    c.ncFlag=calc.ncFlag;
+  allClusters = Object.values(clusterMap).map(function(c){
+    var prices = c.marketPrices.map(function(m){return m.price;}).sort(function(a,b){return a-b;});
+    var minPrice  = prices.length ? prices[0] : null;
+    var maxPrice  = prices.length ? prices[prices.length-1] : null;
+    var avgMarket = prices.length ? prices.reduce(function(a,b){return a+b;},0)/prices.length : null;
+    var cheapestEntry = c.marketPrices.slice().sort(function(a,b){return a.price-b.price;})[0];
+    var cheapestShop  = cheapestEntry ? cheapestEntry.shop : '';
+    var myPrice = c.myPrice, uvp = c.uvp;
+    var priceIndex = (myPrice&&avgMarket) ? myPrice/avgMarket*100 : null;
+    var distAbs    = (myPrice!==null&&minPrice!==null) ? myPrice-minPrice : null;
+    var currentDiscount = (myPrice&&uvp) ? (uvp-myPrice)/uvp*100 : null;
+    var minAllowed = uvp ? uvp*0.70 : null;
+    var calc = cubeCalcCluster(
+      {myPrice:myPrice, minPrice:minPrice, avgMarket:avgMarket, priceIndex:priceIndex},
+      minAllowed, uvp
+    );
+    return {
+      key:c.key, name:c.name, season:c.season, uvp:uvp, myPrice:myPrice,
+      skus:c.skus, modellnummern:c.modellnummern,
+      cheapestShop:cheapestShop, shops:c.shops,
+      prices:prices, minPrice:minPrice, maxPrice:maxPrice, avgMarket:avgMarket,
+      priceIndex:priceIndex, distAbs:distAbs, currentDiscount:currentDiscount,
+      preisvorschlag:c.preisvorschlag, minAllowed:minAllowed,
+      targetPrice:calc.targetPrice, newDiscount:calc.newDiscount,
+      potential:calc.potential, status:calc.status, action:calc.action, ncFlag:calc.ncFlag
+    };
   });
 
-  // Populate Season filter
-  var seasons=[...new Set(allClusters.map(function(c){return c.season;}))].sort();
-  var ovSeason=document.getElementById('ovSeason');
-  ovSeason.innerHTML='<option value="">Alle</option>';
-  seasons.forEach(function(s){ovSeason.innerHTML+='<option value="'+s+'">'+s+'</option>';});
+  // Season Dropdown
+  var seasons = allClusters.map(function(c){return c.season;}).filter(function(v,i,a){return a.indexOf(v)===i;}).sort();
+  var ovSeason = document.getElementById('ovSeason');
+  ovSeason.innerHTML = '<option value="">Alle</option>';
+  seasons.forEach(function(s){
+    var o = document.createElement('option');
+    o.value = s; o.textContent = s==='Aktion' ? '⚡ Aktion' : s;
+    ovSeason.appendChild(o);
+  });
 
-  // Populate Shop filter
-  var shops=[...new Set(allClusters.flatMap(function(c){return c.shops;}))].sort();
-  var ovShop=document.getElementById('ovShop');
-  ovShop.innerHTML='<option value="">Alle</option>';
-  shops.forEach(function(s){ovShop.innerHTML+='<option value="'+s+'">'+s+'</option>';});
+  // Shop Dropdown (günstigster)
+  var shops = allClusters.map(function(c){return c.cheapestShop;}).filter(function(v){return !!v;});
+  shops = shops.filter(function(v,i,a){return a.indexOf(v)===i;}).sort();
+  var ovShop = document.getElementById('ovShop');
+  ovShop.innerHTML = '<option value="">Alle</option>';
+  shops.forEach(function(s){
+    var o = document.createElement('option');
+    o.value = s; o.textContent = s;
+    ovShop.appendChild(o);
+  });
 
   cubeApplyFilters();
 }
 
 function cubeApplyFilters(){
-  var search=(document.getElementById('ovSearch').value||'').toLowerCase();
-  var season=document.getElementById('ovSeason').value;
-  var status=document.getElementById('ovStatus').value;
-  var action=document.getElementById('ovAction').value;
-  var shop=document.getElementById('ovShop').value;
+  var search  = (document.getElementById('ovSearch').value||'').toLowerCase();
+  var season  = document.getElementById('ovSeason').value;
+  var status  = document.getElementById('ovStatus').value;
+  var action  = document.getElementById('ovAction').value;
+  var shop    = document.getElementById('ovShop').value;
+  var idxFilt = document.getElementById('ovIndex') ? document.getElementById('ovIndex').value : '';
+  var sdEl    = document.getElementById('stratDiscount');
+  var stratDiscount = sdEl ? parseInt(sdEl.value) : 30;
+  if(isNaN(stratDiscount)) stratDiscount = 30;
   ovF={search:search,season:season,status:status,action:action,shop:shop};
 
-  filteredClusters=allClusters.filter(function(c){
-    if(search&&c.name.toLowerCase().indexOf(search)<0) return false;
-    if(season&&c.season!==season) return false;
-    if(status&&c.status!==status) return false;
-    if(action&&c.action!==action) return false;
-    if(shop&&c.shops.indexOf(shop)<0) return false;
+  // Preisstrategie Info-Text
+  var infoEl = document.getElementById('stratInfo');
+  if(infoEl){
+    if(!season){
+      infoEl.textContent = '⚠️ Bitte oben eine Season auswählen damit die Strategie greift.';
+      infoEl.style.color = 'var(--amber)';
+    } else {
+      infoEl.textContent = 'Mindestpreis = '+(100-stratDiscount)+'% der UVP · gilt für Season '+season;
+      infoEl.style.color = 'var(--blue)';
+    }
+  }
+
+  // Filter + Neuberechnung mit Strategie
+  filteredClusters = allClusters.filter(function(c){
+    if(search && c.name.toLowerCase().indexOf(search)<0) return false;
+    if(season && c.season!==season) return false;
+    if(shop   && c.cheapestShop!==shop) return false;
+    if(idxFilt==='over'  && (c.priceIndex===null||c.priceIndex<=105)) return false;
+    if(idxFilt==='under' && (c.priceIndex===null||c.priceIndex>=97))  return false;
+    if(idxFilt==='ok'    && (c.priceIndex===null||c.priceIndex<97||c.priceIndex>105)) return false;
+    return true;
+  }).map(function(c){
+    var applyStrat = !!season;
+    var maxRabatt  = applyStrat ? stratDiscount/100 : 0.30;
+    var minAllowed = c.uvp ? c.uvp*(1-maxRabatt) : null;
+    var calc = cubeCalcCluster(
+      {myPrice:c.myPrice, minPrice:c.minPrice, avgMarket:c.avgMarket, priceIndex:c.priceIndex},
+      minAllowed, c.uvp
+    );
+    return Object.assign({}, c, {
+      targetPrice: calc.targetPrice,
+      newDiscount: calc.newDiscount,
+      potential:   calc.potential,
+      status:      calc.status,
+      action:      calc.action,
+      minAllowed:  minAllowed
+    });
+  }).filter(function(c){
+    if(status && c.status!==status) return false;
+    if(action && c.action!==action) return false;
     return true;
   });
 
@@ -1530,6 +1636,8 @@ function cubeClearFilters(){
   document.getElementById('ovStatus').value='';
   document.getElementById('ovAction').value='';
   document.getElementById('ovShop').value='';
+  if(document.getElementById('ovIndex'))    document.getElementById('ovIndex').value='';
+  if(document.getElementById('stratDiscount')) document.getElementById('stratDiscount').value='30';
   cubeApplyFilters();
 }
 
@@ -1685,7 +1793,7 @@ function cubeRenderTable(src){
     var idx=c.priceIndex;
     var idxColor=idx?idx>105?'#c0392b':idx<97?'#1a7a3f':'var(--text)':'';
     return '<tr style="border-bottom:0.5px solid var(--border);">'+
-      '<td style="padding:8px 10px;font-weight:500;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+c.name+'">'+c.name+'</td>'+
+      '<td style="padding:8px 10px;max-width:240px;"><div style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+c.name+'">'+c.name+'</div><div style="font-size:10px;color:var(--muted);margin-top:2px;">'+c.modellnummern.slice(0,3).join(', ')+(c.skus.length>1?' · '+c.skus.length+' SKUs':'')+'</div></td>'+
       '<td style="padding:8px 10px;font-size:11px;color:var(--muted);">'+c.season+'</td>'+
       '<td style="padding:8px 10px;font-family:DM Mono,monospace;font-size:12px;">'+cubeFmtE(c.myPrice)+'</td>'+
       '<td style="padding:8px 10px;font-family:DM Mono,monospace;font-size:12px;color:var(--muted);">'+cubeFmtE(c.uvp)+'</td>'+
