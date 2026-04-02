@@ -762,35 +762,15 @@ var API_SOURCES = {
   fahrraeder: GITHUB_BASE + 'shoptracker_fahrraeder.csv',
   zubehoer:   GITHUB_BASE + 'shoptracker_zubehoer.csv'
 };
-var PRODUKT_URL = GITHUB_BASE + 'produktdaten.csv';
+
 
 var currentSource = 'cube';
-var produktDB = {};
 var currentPage = 1;
 var pageSize = 25;
 var currentFilter = 'all';
 var searchTerm = '';
 
-// ── Produktdaten von GitHub laden ──
-function loadProduktdaten() {
-  fetch(PRODUKT_URL)
-    .then(function(res) {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return res.text();
-    })
-    .then(function(csv) {
-      var rows = parseCSV(csv);
-      produktDB = {};
-      rows.forEach(function(r) {
-        var sku = (r['sku'] || r['SKU'] || '').trim();
-        if (sku) produktDB[sku] = r;
-      });
-      console.log('Produktdaten geladen:', Object.keys(produktDB).length);
-    })
-    .catch(function(err) {
-      console.warn('Produktdaten nicht geladen:', err.message);
-    });
-}
+// Produktdaten-Matching deaktiviert (Datei zu groß für GitHub)
 
 // ── Datenquelle wechseln ──
 function onSourceChange(source) {
@@ -1129,7 +1109,6 @@ function checkPw() {
   if (val === PW) {
     sessionStorage.setItem('px_auth', '1');
     document.getElementById('pwOverlay').style.display = 'none';
-    loadProduktdaten();
   } else {
     var inp = document.getElementById('pwInput');
     var err = document.getElementById('pwError');
@@ -1144,7 +1123,7 @@ window.addEventListener('load', function() {
   setTimeout(function() {
     document.getElementById('loadingOverlay').style.display = 'none';
     if (sessionStorage.getItem('px_auth')) {
-      loadProduktdaten();
+      // kein Produktdaten-Laden
     } else {
       document.getElementById('pwOverlay').style.display = 'flex';
     }
