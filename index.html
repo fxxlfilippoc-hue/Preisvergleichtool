@@ -881,13 +881,17 @@
             <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;width:200px;">Produktname</th>
             <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;width:65px;">Season</th>
             <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;">Mein Preis</th>
+            <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;">Mein Rabatt</th>
             <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;">Ø Markt</th>
-            <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;">Niedrigster</th>
-            <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;">Index</th>
+            <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;width:110px;">Niedrigster</th>
+            <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;width:70px;">Index</th>
             <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;">Zielpreis</th>
-            <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;">Differenz</th>
-            <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;">Pos</th>
-            <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;">Günstigster Anbieter</th>
+            <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;">Rabatt (Ziel)</th>
+            <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;">Potenzial</th>
+            <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;">Empfehlung</th>
+            <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;">Status</th>
+            <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;">UVP</th>
+            <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;width:110px;">Shops</th>
           </tr>
         </thead>
         <tbody id="tableBody"></tbody>
@@ -1147,6 +1151,16 @@ function updateDashboard(rows) {
     else pos4plus++;
 
     if (pos > 1 && !isNaN(cheapPrice)) {
+      var uvp        = parseNum(r['UVP']);
+      var median     = parseNum(r['Medianpreis']);
+      var numShops   = parseInt(r['Preise']) || 0;
+      var minPreis   = parseNum(r['Mindestpreis']);
+      var maxPreis   = parseNum(r['Standardpreis']);
+      var myRabatt   = (!isNaN(uvp) && uvp > 0 && !isNaN(myPrice)) ? (uvp - myPrice) / uvp * 100 : NaN;
+      // Niedrigster = Mindestpreis oder günstigster Konkurrenzpreis
+      var niedrigster = !isNaN(minPreis) ? minPreis : cheapPrice;
+      // Höchster = Standardpreis oder UVP
+      var hoechster   = !isNaN(maxPreis) ? maxPreis : (!isNaN(uvp) ? uvp : NaN);
       tableRows.push({
         sku:               sku,
         name:              r['Artikelbezeichnung'] || prod['name'] || '',
@@ -1156,7 +1170,12 @@ function updateDashboard(rows) {
         cheapest_provider: provider,
         diff:              isNaN(diff) ? 0 : diff,
         position:          pos,
-        uvp:               parseNum(r['UVP']),
+        uvp:               uvp,
+        my_rabatt:         myRabatt,
+        niedrigster:       niedrigster,
+        hoechster:         hoechster,
+        median_price:      median,
+        num_shops:         numShops,
         preisvorschlag:    parseNum(r['Preisvorschlag'])
       });
     }
@@ -1341,11 +1360,18 @@ function renderTable() {
     var diffSign  = r.diff > 0 ? '+' : '';
     var seasonMatch = (r.name || '').match(/\b(20\d{2})\b/);
     var season = seasonMatch ? seasonMatch[1] : (/aktion/i.test(r.name||'') ? 'Aktion' : '');
-    var idx = (!isNaN(r.my_price) && !isNaN(r.cheapest_price) && r.cheapest_price > 0)
-      ? (r.my_price / r.cheapest_price * 100) : null;
+    // Index: Mein Preis vs. Niedrigster
+    var niedrig = !isNaN(r.niedrigster) ? r.niedrigster : r.cheapest_price;
+    var idx = (!isNaN(r.my_price) && !isNaN(niedrig) && niedrig > 0)
+      ? r.my_price / niedrig * 100 : null;
     var idxColor = idx===null ? '#888' : idx>105 ? '#c0392b' : idx<97 ? '#1a7a3f' : '#1A1A18';
-    var posBg  = r.position===2 ? '#FFFBEB' : r.position===3 ? '#FDEAEA' : '#F3F4F6';
-    var posClr = r.position===2 ? '#92400E' : r.position===3 ? '#B91C1C' : '#4B5563';
+    var posBg    = r.position===2 ? '#FFFBEB' : r.position===3 ? '#FDEAEA' : '#F3F4F6';
+    var posClr   = r.position===2 ? '#92400E' : r.position===3 ? '#B91C1C' : '#4B5563';
+    var rabStr   = !isNaN(r.my_rabatt) ? '-' + r.my_rabatt.toFixed(1) + '%' : '-0,0%';
+    var uvpStr   = !isNaN(r.uvp) && r.uvp > 0 ? r.uvp.toFixed(2) + ' €' : '—';
+    var shopsStr = r.num_shops > 0 ? r.num_shops + ' Shops' : '—';
+    var niedrigStr = !isNaN(niedrig) ? niedrig.toFixed(2) + ' €' : '—';
+    var hoechStr   = !isNaN(r.hoechster) ? r.hoechster.toFixed(2) + ' €' : '—';
     return '<tr style="background:#fff;">' +
       '<td style="'+td+'max-width:200px;">' +
         '<div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+r.name+'">'+r.name+'</div>' +
@@ -1355,13 +1381,23 @@ function renderTable() {
         (season ? '<span style="background:#EBF3FC;color:#185FA5;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;">'+season+'</span>' : '<span style="color:#ccc;">—</span>') +
       '</td>' +
       '<td style="'+mono+'font-weight:600;">'+(isNaN(r.my_price)?'—':r.my_price.toFixed(2)+' €')+'</td>' +
+      '<td style="'+mono+'color:#888;">'+rabStr+'</td>' +
       '<td style="'+mono+'color:#888;">—</td>' +
-      '<td style="'+td+'"><div style="font-weight:700;color:#c0392b;">'+(isNaN(r.cheapest_price)?'—':r.cheapest_price.toFixed(2)+' €')+'</div></td>' +
+      '<td style="'+td+'">' +
+        '<div style="font-weight:700;color:#c0392b;font-family:monospace;">'+niedrigStr+'</div>' +
+        '<div style="font-size:11px;color:#888;">'+(r.cheapest_provider||'')+'</div>' +
+      '</td>' +
+      '<td style="'+mono+'color:#888;">'+hoechStr+'</td>' +
       '<td style="'+mono+'font-weight:700;color:'+idxColor+';">'+(idx!==null?idx.toFixed(1)+'%':'—')+'</td>' +
       '<td style="'+mono+'color:#ccc;">—</td>' +
-      '<td style="'+mono+'font-weight:700;color:'+diffColor+';">'+(isNaN(r.diff)?'—':diffSign+r.diff.toFixed(2)+' €')+'</td>' +
-      '<td style="'+td+'text-align:center;"><span style="background:'+posBg+';color:'+posClr+';font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;">#'+r.position+'</span></td>' +
-      '<td style="'+td+'"><div style="font-weight:600;color:#185FA5;font-size:12px;">'+(r.cheapest_provider||'—')+'</div></td>' +
+      '<td style="'+mono+'color:#ccc;">—</td>' +
+      '<td style="'+td+'color:#ccc;">—</td>' +
+      '<td style="'+td+'color:#ccc;">—</td>' +
+      '<td style="'+mono+'color:#888;">'+uvpStr+'</td>' +
+      '<td style="'+td+'">' +
+        '<div style="font-weight:600;color:#185FA5;font-size:12px;">'+(r.cheapest_provider||'—')+'</div>' +
+        '<div style="font-size:11px;color:#888;">'+shopsStr+'</div>' +
+      '</td>' +
       '</tr>';
   }).join('');
 
