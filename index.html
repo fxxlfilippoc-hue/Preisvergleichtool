@@ -657,13 +657,7 @@
     <span style="color:var(--muted);font-size:12px;font-weight:400;padding-left:8px;border-left:1px solid var(--border);margin-left:4px;">Preisvergleich</span>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
-    <!-- Strategie Bar -->
-    <div id="stratBar" style="display:none;align-items:center;gap:8px;">
-      <div id="stratAppliedBadge" style="font-size:11px;color:var(--green);font-weight:500;white-space:nowrap;"></div>
-      <button id="stratApplyBtn" onclick="stratApplyFromTable()" style="font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;padding:6px 14px;border-radius:var(--radius);border:none;background:var(--accent);color:#fff;cursor:pointer;white-space:nowrap;">
-        ⚡ Strategie anwenden
-      </button>
-    </div>
+
     <span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;font-weight:500;">Datenquelle</span>
     <div class="source-dropdown-wrap">
       <select class="source-select" id="sourceSelect" onchange="onSourceChange(this.value)">
@@ -862,6 +856,16 @@
   <!-- Preisanpassungen Tab -->
   <div id="tab-preisanpassungen" class="tab-panel">
 
+    <!-- Strategie Bar -->
+    <div id="stratBar" style="display:none;padding:10px 0 4px;">
+      <div style="display:flex;align-items:center;gap:10px;background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:8px 14px;">
+        <div id="stratAppliedBadge" style="font-size:11px;color:var(--green);font-weight:600;"></div>
+        <button id="stratApplyBtn" onclick="stratApplyFromTable()" style="font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:7px 16px;border-radius:var(--radius);border:none;background:var(--accent);color:#fff;cursor:pointer;">
+          ⚡ Strategie anwenden
+        </button>
+      </div>
+    </div>
+
     <!-- Normal: Nicht auf Platz 1 (Fahrräder / Zubehör) -->
     <div id="normal-preis-panel">
 
@@ -992,7 +996,12 @@
       <div class="cube-kpi-row" id="kpiRow"></div>
 
       <!-- Insights Grid -->
-      <div class="cube-insights">
+      <div style="margin-bottom:0.75rem;">
+        <button onclick="toggleCubeInsights(this)" style="font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;color:var(--muted);background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;">
+          <span id="cubeInsightsArrow" style="font-size:10px;">▼</span> Insights ausblenden
+        </button>
+      </div>
+      <div id="cubeInsightsPanel" class="cube-insights">
         <div class="cube-card">
           <div class="cube-card-header">🔴 Top 5 Kritischste Produkte</div>
           <div class="cube-card-body"><div id="insightCritical"></div><div class="summary-bar" id="summaryBar"></div></div>
@@ -1009,27 +1018,37 @@
           <div class="cube-card-body"><div id="insightMarge"></div></div>
         </div>
         <div class="cube-card" style="grid-column:1/-1;">
-          <div class="cube-card-header">📅 Analyse nach Season</div>
-          <div class="cube-card-body"><div id="insightSeason"></div></div>
+          <div class="cube-card-header" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleSeasonCard(this)">
+            <span>📅 Analyse nach Season</span>
+            <span style="font-size:10px;color:var(--muted);">▼</span>
+          </div>
+          <div class="cube-card-body" id="seasonCardBody"><div id="insightSeason"></div></div>
         </div>
+      </div>
       </div>
 
       <!-- Preisstrategie (direkt über Tabelle) -->
-      <div class="cube-filters" style="margin-top:0.5rem;background:var(--blue-soft);border-color:rgba(24,95,165,0.2);">
-        <span style="font-size:11px;font-weight:600;color:var(--blue);width:100%;margin-bottom:2px;">🎯 Preisstrategie — wähle oben eine Season aus damit die Strategie greift</span>
-        <div class="fg">
-          <label>Max. Rabatt auf UVP</label>
-          <select id="stratDiscount" onchange="cubeApplyFilters()">
-            <option value="30">Standard (30%)</option>
-            <option value="0">0% — kein Rabatt</option>
-            <option value="5">5%</option>
-            <option value="10">10%</option>
-            <option value="15">15%</option>
-            <option value="20">20%</option>
-            <option value="25">25%</option>
-          </select>
+      <div id="cubeStratBlock" class="cube-filters" style="margin-top:0.5rem;background:var(--blue-soft);border-color:rgba(24,95,165,0.2);">
+        <div id="cubeStratActive" style="display:none;width:100%;">
+          <div style="font-size:11px;font-weight:600;color:var(--green);">✓ Preisstrategie aktiv — Zielpreise werden aus den Einstellungen berechnet</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">Gehe zu Einstellungen → Preisstrategien → Cube Fahrrad um Regeln zu bearbeiten.</div>
         </div>
-        <div style="font-size:11px;color:var(--amber);align-self:center;" id="stratInfo">⚠️ Bitte oben eine Season auswählen damit die Strategie greift.</div>
+        <div id="cubeStratManual" style="width:100%;">
+          <span style="font-size:11px;font-weight:600;color:var(--blue);width:100%;margin-bottom:2px;display:block;">🎯 Preisstrategie — wähle oben eine Season aus damit die Strategie greift</span>
+          <div class="fg">
+            <label>Max. Rabatt auf UVP</label>
+            <select id="stratDiscount" onchange="cubeApplyFilters()">
+              <option value="30">Standard (30%)</option>
+              <option value="0">0% — kein Rabatt</option>
+              <option value="5">5%</option>
+              <option value="10">10%</option>
+              <option value="15">15%</option>
+              <option value="20">20%</option>
+              <option value="25">25%</option>
+            </select>
+          </div>
+          <div style="font-size:11px;color:var(--amber);align-self:center;" id="stratInfo">⚠️ Bitte oben eine Season auswählen damit die Strategie greift.</div>
+        </div>
       </div>
 
       <!-- Cube Tabelle -->
@@ -1312,7 +1331,7 @@ function onSourceChange(source) {
       var label = sel.options[sel.selectedIndex].text;
       showToast(label + ': ' + parsed.length.toLocaleString('de-DE') + ' Artikel geladen');
       toggleCubePanel(source === 'cube');
-      if(source === 'cube') cubeBuildDashboard(parsed);
+      if(source === 'cube') { cubeBuildDashboard(parsed); updateCubeStratBlock(); }
       stratUpdateTableBtn();
       // Auto-apply strategy if rules exist for this source
       var rules = stratData[source] || [];
@@ -1942,19 +1961,17 @@ function stratApplyFromTable() {
 }
 
 function stratUpdateTableBtn() {
-  var src = document.getElementById('sourceSelect') ? document.getElementById('sourceSelect').value : '';
+  var src   = document.getElementById('sourceSelect') ? document.getElementById('sourceSelect').value : '';
   var rules = stratData[src] || [];
-  var btn = document.getElementById('stratApplyBtn');
+  var btn   = document.getElementById('stratApplyBtn');
   var badge = document.getElementById('stratAppliedBadge');
-  if (!btn) return;
+  var bar   = document.getElementById('stratBar');
   if (rules.length > 0) {
-    btn.style.display = 'block';
-    btn.textContent = '⚡ Strategie anwenden (' + rules.length + ' Regel' + (rules.length > 1 ? 'n' : '') + ')';
+    if (bar) bar.style.display = 'block';
+    if (btn) btn.textContent = '⚡ Strategie anwenden (' + rules.length + ' Regel' + (rules.length > 1 ? 'n' : '') + ')';
   } else {
-    btn.style.display = 'none';
-  }
-  if (badge && !stratApplied[src]) {
-    badge.style.display = 'none';
+    if (bar) bar.style.display = 'none';
+    if (badge) badge.textContent = '';
   }
 }
 
@@ -2760,6 +2777,7 @@ function stratApply() {
   stratApplied[stratCurrentSrc]=true;
   stratShowBanner('✓ Zielpreise berechnet für '+count+' von '+DATA.table.length+' Artikeln.','success');
   if(document.getElementById('tab-preisanpassungen').classList.contains('active')) renderTable();
+  updateCubeStratBlock();
 }
 
 function stratReset() {
@@ -2826,5 +2844,39 @@ function stratDownloadTemplate() {
   a.download='preisstrategie_vorlage.csv';
   a.click();
 }
+function toggleCubeInsights(btn) {
+  var panel = document.getElementById('cubeInsightsPanel');
+  var arrow = document.getElementById('cubeInsightsArrow');
+  if (!panel) return;
+  var collapsed = panel.style.display === 'none';
+  panel.style.display = collapsed ? '' : 'none';
+  if (arrow) arrow.textContent = collapsed ? '▼' : '▶';
+  btn.childNodes[1].textContent = collapsed ? ' Insights ausblenden' : ' Insights einblenden';
+}
+
+function toggleSeasonCard(header) {
+  var body = document.getElementById('seasonCardBody');
+  var arrow = header.querySelector('span:last-child');
+  if (!body) return;
+  var collapsed = body.style.display === 'none';
+  body.style.display = collapsed ? '' : 'none';
+  if (arrow) arrow.textContent = collapsed ? '▼' : '▶';
+}
+
+function updateCubeStratBlock() {
+  var src = 'cube';
+  var hasRules = stratData[src] && stratData[src].length > 0 && stratApplied[src];
+  var activeDiv = document.getElementById('cubeStratActive');
+  var manualDiv = document.getElementById('cubeStratManual');
+  if (!activeDiv || !manualDiv) return;
+  if (hasRules) {
+    activeDiv.style.display = 'block';
+    manualDiv.style.display = 'none';
+  } else {
+    activeDiv.style.display = 'none';
+    manualDiv.style.display = 'block';
+  }
+}
+
 
 </script>
