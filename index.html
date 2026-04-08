@@ -1040,18 +1040,87 @@
       <button class="strat-src-btn" data-src="zubehoer" onclick="stratSelectSource(this,'zubehoer')">Zubehör</button>
     </div>
 
+    <!-- Status Banner -->
+    <div id="stratStatusBanner" style="display:none;margin-bottom:1rem;padding:10px 14px;border-radius:var(--radius);font-size:12px;"></div>
+
+    <!-- Regel hinzufügen -->
+    <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1.1rem 1.25rem;margin-bottom:1rem;">
+      <div style="font-size:12px;font-weight:500;margin-bottom:12px;color:var(--text);">+ Neue Regel hinzufügen</div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
+
+        <div class="fg">
+          <label>Priorität</label>
+          <select id="newPrio" style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;">
+            <option value="1">P1 — Catchall</option>
+            <option value="2">P2 — Semi-spezifisch</option>
+            <option value="3" selected>P3 — Spezifisch</option>
+          </select>
+        </div>
+
+        <div class="fg">
+          <label>Season</label>
+          <select id="newSeason" style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;min-width:100px;">
+            <option value="alle">Alle</option>
+            <option value="2026">2026</option>
+            <option value="2025">2025</option>
+            <option value="2024">2024</option>
+            <option value="Aktion">Aktion</option>
+          </select>
+        </div>
+
+        <div class="fg">
+          <label>Marke</label>
+          <input id="newMarke" type="text" placeholder="z.B. Cube oder alle" value="alle"
+            style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;width:130px;">
+        </div>
+
+        <div class="fg">
+          <label>Strategie</label>
+          <select id="newStrategie" onchange="stratUpdateWertLabel()" style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;min-width:170px;">
+            <option value="markt_minus_x">Günstigster − x €</option>
+            <option value="markt_minus_pct">Günstigster − x %</option>
+            <option value="uvp_minus_rabatt">UVP − Rabatt %</option>
+            <option value="günstigster_plus_x">Günstigster + x €</option>
+            <option value="günstigster_plus_pct">Günstigster + x %</option>
+            <option value="zielposition">Zielposition (Platz #)</option>
+          </select>
+        </div>
+
+        <div class="fg">
+          <label id="newWertLabel">Wert (€)</label>
+          <input id="newWert" type="number" value="10" min="0" step="1"
+            style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;width:80px;">
+        </div>
+
+        <div class="fg">
+          <label>Max. Rabatt %</label>
+          <input id="newMaxRabatt" type="number" value="30" min="0" max="100" step="1"
+            style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;width:70px;">
+        </div>
+
+        <div class="fg" style="align-self:flex-end;">
+          <button onclick="stratAddRule()" style="font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:7px 18px;border-radius:var(--radius);border:none;background:var(--text);color:#fff;cursor:pointer;height:34px;">
+            Hinzufügen
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Upload + Aktionen -->
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.25rem;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;flex-wrap:wrap;">
       <input type="file" id="stratCsvInput" accept=".csv" style="display:none;" onchange="stratLoadCSV(this.files[0])">
-      <button class="pill" onclick="document.getElementById('stratCsvInput').click()" style="height:34px;padding:0 16px;font-size:12px;">
+      <button class="pill" onclick="document.getElementById('stratCsvInput').click()" style="height:32px;padding:0 14px;font-size:12px;">
         CSV hochladen
       </button>
-      <button class="pill" onclick="stratDownloadTemplate()" style="height:34px;padding:0 16px;font-size:12px;color:var(--muted);">
+      <button class="pill" onclick="stratDownloadTemplate()" style="height:32px;padding:0 14px;font-size:12px;color:var(--muted);">
         Vorlage herunterladen
+      </button>
+      <button class="pill" onclick="stratExportCSV()" style="height:32px;padding:0 14px;font-size:12px;color:var(--muted);">
+        Regeln exportieren
       </button>
       <div style="margin-left:auto;display:flex;gap:8px;">
         <button onclick="stratReset()" style="font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;padding:7px 16px;border-radius:var(--radius);border:0.5px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;">
-          Strategie zurücksetzen
+          Zurücksetzen
         </button>
         <button onclick="stratApply()" style="font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:7px 20px;border-radius:var(--radius);border:none;background:var(--accent);color:#fff;cursor:pointer;">
           Strategie anwenden
@@ -1059,54 +1128,50 @@
       </div>
     </div>
 
-    <!-- Status Banner -->
-    <div id="stratStatusBanner" style="display:none;margin-bottom:1rem;padding:10px 14px;border-radius:var(--radius);font-size:12px;"></div>
-
-    <!-- Strategie Tabelle -->
-    <div class="table-wrap" id="stratTableWrap">
+    <!-- Regeln Tabelle -->
+    <div class="table-wrap">
       <div class="table-header" style="padding:0.75rem 1.25rem;">
-        <div style="font-size:13px;font-weight:500;">Regeln <span id="stratRuleCount" style="font-size:11px;color:var(--muted);margin-left:6px;"></span></div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:13px;font-weight:500;">Regeln</span>
+          <span id="stratRuleCount" style="font-size:11px;color:var(--muted);"></span>
+        </div>
         <div style="font-size:11px;color:var(--muted);">Höhere Prioritätszahl = spezifischer = gewinnt</div>
       </div>
       <div style="overflow-x:auto;">
         <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
           <thead>
             <tr style="background:#F4F3EF;">
-              <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;width:60px;">Priorität</th>
+              <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;width:80px;">Priorität</th>
               <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;">Season</th>
               <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;">Marke</th>
-              <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;width:180px;">Strategie</th>
+              <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;width:170px;">Strategie</th>
               <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;width:80px;">Wert</th>
-              <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;width:80px;">Max. Rabatt %</th>
-              <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;width:70px;">Aktiv</th>
-              <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;">Angewendet auf</th>
+              <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;width:90px;">Max. Rabatt</th>
+              <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;width:80px;">Aktiv</th>
+              <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;">Gilt für</th>
+              <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;width:60px;">Löschen</th>
             </tr>
           </thead>
           <tbody id="stratTableBody">
-            <tr><td colspan="8" style="padding:2rem;text-align:center;color:var(--muted);font-size:12px;">Noch keine Strategie geladen — CSV hochladen oder Vorlage herunterladen</td></tr>
+            <tr><td colspan="9" style="padding:2rem;text-align:center;color:var(--muted);font-size:12px;">Noch keine Regeln — füge eine Regel hinzu oder lade eine CSV hoch</td></tr>
           </tbody>
         </table>
       </div>
     </div>
 
-    <!-- Info Box -->
-    <div style="margin-top:1.25rem;background:var(--blue-soft);border:0.5px solid rgba(24,95,165,0.2);border-radius:var(--radius-lg);padding:1rem 1.25rem;">
-      <div style="font-size:12px;font-weight:600;color:var(--blue);margin-bottom:8px;">📋 CSV Format</div>
-      <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--blue);line-height:1.8;background:rgba(24,95,165,0.06);border-radius:6px;padding:10px 12px;">
+    <!-- Format Info -->
+    <div style="margin-top:1rem;background:var(--blue-soft);border:0.5px solid rgba(24,95,165,0.2);border-radius:var(--radius-lg);padding:1rem 1.25rem;">
+      <div style="font-size:12px;font-weight:600;color:var(--blue);margin-bottom:6px;">📋 CSV Format (Semikolon-getrennt)</div>
+      <div style="font-family:monospace;font-size:11px;color:var(--blue);line-height:1.8;background:rgba(24,95,165,0.06);border-radius:6px;padding:8px 12px;">
         prioritaet;season;marke;strategie;wert;max_rabatt_pct;aktiv<br>
         1;alle;alle;uvp_minus_rabatt;30;;ja<br>
         2;2026;alle;markt_minus_x;10;30;ja<br>
         3;2026;Cube;markt_minus_pct;5;25;ja
       </div>
-      <div style="margin-top:10px;font-size:11px;color:var(--muted);line-height:1.7;">
+      <div style="margin-top:8px;font-size:11px;color:var(--muted);line-height:1.7;">
         <b style="color:var(--text);">Strategien:</b>
-        <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;">markt_minus_x</code> ·
-        <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;">markt_minus_pct</code> ·
-        <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;">zielposition</code> ·
-        <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;">uvp_minus_rabatt</code> ·
-        <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;">günstigster_plus_x</code> ·
-        <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;">günstigster_plus_pct</code><br>
-        <b style="color:var(--text);">Hierarchie:</b> Priorität 1 = Catchall (alle) · Höhere Zahl = spezifischer · Spezifischste Regel gewinnt
+        markt_minus_x · markt_minus_pct · zielposition · uvp_minus_rabatt · günstigster_plus_x · günstigster_plus_pct<br>
+        <b style="color:var(--text);">Hierarchie:</b> P1 = Catchall · P2 = Semi-spezifisch · P3 = Spezifisch — höchste passende Priorität gewinnt
       </div>
     </div>
 
@@ -2349,6 +2414,7 @@ function stratRenderTable() {
         (function(ri,ra){var btn=document.createElement('button');btn.style.cssText='font-family:sans-serif;font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px;cursor:pointer;border:0.5px solid;background:'+(ra?'var(--green-soft);color:var(--green);border-color:var(--green)':'var(--surface2);color:var(--muted);border-color:var(--border)');btn.textContent=ra?'Aktiv':'Inaktiv';btn.onclick=function(){stratToggleRule(ri);};return '<td style="padding:9px 12px;text-align:center;">'+btn.outerHTML+'</td>';})(i,isActive)+
 
       '<td style="padding:9px 12px;font-size:11px;color:#888;">'+scopeStr+'</td>'+
+      '<td style="padding:9px 12px;text-align:center;"><button onclick="stratDeleteRule('+i+')" style="font-family:sans-serif;font-size:11px;color:#c0392b;background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:4px;" title="Löschen">✕</button></td>'+
       '</tr>';
   }).join('');
 }
@@ -2451,5 +2517,52 @@ function stratDownloadTemplate() {
   a.download='preisstrategie_vorlage.csv';
   a.click();
 }
+
+function stratUpdateWertLabel() {
+  var s = document.getElementById('newStrategie').value;
+  var lbl = document.getElementById('newWertLabel');
+  if (!lbl) return;
+  if (s === 'markt_minus_pct' || s === 'markt_minus_x') lbl.textContent = s.indexOf('pct') > -1 ? 'Wert (%)' : 'Wert (€)';
+  else if (s === 'uvp_minus_rabatt') lbl.textContent = 'Rabatt (%)';
+  else if (s === 'zielposition') lbl.textContent = 'Platz #';
+  else lbl.textContent = s.indexOf('pct') > -1 ? 'Wert (%)' : 'Wert (€)';
+}
+
+function stratAddRule() {
+  var prio   = parseInt(document.getElementById('newPrio').value) || 1;
+  var season = document.getElementById('newSeason').value || 'alle';
+  var marke  = (document.getElementById('newMarke').value || 'alle').trim();
+  var strat  = document.getElementById('newStrategie').value;
+  var wert   = parseFloat(document.getElementById('newWert').value) || 0;
+  var maxRab = parseFloat(document.getElementById('newMaxRabatt').value) || 30;
+  if (!strat) { stratShowBanner('Bitte eine Strategie auswählen.', 'error'); return; }
+  var rule = { prioritaet: prio, season: season, marke: marke || 'alle',
+               strategie: strat, wert: wert, max_rabatt_pct: maxRab, aktiv: true };
+  stratData[stratCurrentSrc].push(rule);
+  stratData[stratCurrentSrc].sort(function(a,b){ return b.prioritaet - a.prioritaet; });
+  stratApplied[stratCurrentSrc] = false;
+  stratRenderTable();
+  stratShowBanner('Regel hinzugefügt. Klick auf "Strategie anwenden" um Zielpreise zu berechnen.', 'info');
+}
+
+function stratDeleteRule(idx) {
+  stratData[stratCurrentSrc].splice(idx, 1);
+  stratApplied[stratCurrentSrc] = false;
+  stratRenderTable();
+}
+
+function stratExportCSV() {
+  var rules = stratData[stratCurrentSrc];
+  if (!rules || !rules.length) { stratShowBanner('Keine Regeln zum Exportieren.', 'error'); return; }
+  var csv = 'prioritaet;season;marke;strategie;wert;max_rabatt_pct;aktiv\n';
+  rules.forEach(function(r) {
+    csv += [r.prioritaet, r.season, r.marke, r.strategie, r.wert, r.max_rabatt_pct, r.aktiv?'ja':'nein'].join(';') + '\n';
+  });
+  var a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,﻿' + encodeURIComponent(csv);
+  a.download = 'preisstrategie_' + stratCurrentSrc + '.csv';
+  a.click();
+}
+
 
 </script>
