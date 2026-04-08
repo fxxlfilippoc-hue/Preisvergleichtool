@@ -855,6 +855,16 @@
   <!-- Preisanpassungen Tab -->
   <div id="tab-preisanpassungen" class="tab-panel">
 
+    <!-- Strategie Bar (immer sichtbar) -->
+    <div id="stratBar" style="display:none;background:var(--surface);border-bottom:0.5px solid var(--border);padding:8px 0 10px;margin-bottom:1rem;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div id="stratAppliedBadge" style="font-size:11px;color:var(--green);font-weight:500;"></div>
+        <button id="stratApplyBtn" onclick="stratApplyFromTable()" style="font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:7px 16px;border-radius:var(--radius);border:none;background:var(--accent);color:#fff;cursor:pointer;">
+          ⚡ Strategie anwenden
+        </button>
+      </div>
+    </div>
+
     <!-- Normal: Nicht auf Platz 1 (Fahrräder / Zubehör) -->
     <div id="normal-preis-panel">
 
@@ -888,12 +898,6 @@
         </div>
         <div class="filter-actions">
           <button class="pill" onclick="normalClearFilters()" style="height:32px;">Zurücksetzen</button>
-        </div>
-        <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
-          <div id="stratAppliedBadge" style="display:none;font-size:11px;color:var(--green);font-weight:500;"></div>
-          <button id="stratApplyBtn" onclick="stratApplyFromTable()" style="font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:7px 16px;border-radius:var(--radius);border:none;background:var(--accent);color:#fff;cursor:pointer;display:none;">
-            ⚡ Strategie anwenden
-          </button>
         </div>
       </div>
 
@@ -1324,7 +1328,7 @@ function onSourceChange(source) {
         });
         stratApplied[source] = true;
         var badge = document.getElementById('stratAppliedBadge');
-        if (badge && count > 0) { badge.style.display='block'; badge.textContent='✓ '+count+' Zielpreise berechnet'; }
+        if (badge && count > 0) badge.textContent = '✓ '+count+' Zielpreise berechnet';
       }
     })
     .catch(function(err) {
