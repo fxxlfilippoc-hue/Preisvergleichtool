@@ -1118,34 +1118,27 @@
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:12px;">3 — Strategie</div>
 
       <!-- Strategie Auswahl Cards -->
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;">
-        <button class="strat-type-btn active" data-strat="markt_minus_x" onclick="stratSetType(this,'markt_minus_x')">
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
+        <button class="strat-type-btn active" data-strat="markt_minus_x" onclick="stratSetType(this,'markt_minus_x')" style="padding:7px 14px;">
           <div style="font-size:12px;font-weight:600;">Günstigster − x €</div>
-          <div style="font-size:10px;opacity:0.7;margin-top:2px;">Fester Abstand zum günstigsten</div>
         </button>
-        <button class="strat-type-btn" data-strat="markt_minus_pct" onclick="stratSetType(this,'markt_minus_pct')">
+        <button class="strat-type-btn" data-strat="markt_minus_pct" onclick="stratSetType(this,'markt_minus_pct')" style="padding:7px 14px;">
           <div style="font-size:12px;font-weight:600;">Günstigster − x %</div>
-          <div style="font-size:10px;opacity:0.7;margin-top:2px;">Prozentualer Abstand</div>
         </button>
-        <button class="strat-type-btn" data-strat="günstigster_plus_x" onclick="stratSetType(this,'günstigster_plus_x')">
+        <button class="strat-type-btn" data-strat="günstigster_plus_x" onclick="stratSetType(this,'günstigster_plus_x')" style="padding:7px 14px;">
           <div style="font-size:12px;font-weight:600;">Günstigster + x €</div>
-          <div style="font-size:10px;opacity:0.7;margin-top:2px;">Knapp über dem günstigsten</div>
         </button>
-        <button class="strat-type-btn" data-strat="günstigster_plus_pct" onclick="stratSetType(this,'günstigster_plus_pct')">
+        <button class="strat-type-btn" data-strat="günstigster_plus_pct" onclick="stratSetType(this,'günstigster_plus_pct')" style="padding:7px 14px;">
           <div style="font-size:12px;font-weight:600;">Günstigster + x %</div>
-          <div style="font-size:10px;opacity:0.7;margin-top:2px;">Prozentual über günstigstem</div>
         </button>
-        <button class="strat-type-btn" data-strat="uvp_minus_rabatt" onclick="stratSetType(this,'uvp_minus_rabatt')">
+        <button class="strat-type-btn" data-strat="uvp_minus_rabatt" onclick="stratSetType(this,'uvp_minus_rabatt')" style="padding:7px 14px;">
           <div style="font-size:12px;font-weight:600;">UVP − Rabatt %</div>
-          <div style="font-size:10px;opacity:0.7;margin-top:2px;">Fixer Rabatt auf UVP</div>
         </button>
-        <button class="strat-type-btn" data-strat="zielposition" onclick="stratSetType(this,'zielposition')">
+        <button class="strat-type-btn" data-strat="zielposition" onclick="stratSetType(this,'zielposition')" style="padding:7px 14px;">
           <div style="font-size:12px;font-weight:600;">Zielposition</div>
-          <div style="font-size:10px;opacity:0.7;margin-top:2px;">Platz 1, 2, 3 anstreben</div>
         </button>
-        <button class="strat-type-btn" data-strat="min_max" onclick="stratSetType(this,'min_max')" style="grid-column:span 2;">
-          <div style="font-size:12px;font-weight:600;">Min / Max Preis (% Rabatt UVP)</div>
-          <div style="font-size:10px;opacity:0.7;margin-top:2px;">Zielpreis zwischen Min & Max — orientiert am Marktpreis</div>
+        <button class="strat-type-btn" data-strat="min_max" onclick="stratSetType(this,'min_max')" style="padding:7px 14px;">
+          <div style="font-size:12px;font-weight:600;">Min / Max % (Korridor)</div>
         </button>
       </div>
 
@@ -1176,15 +1169,7 @@
         </div>
       </div>
 
-      <!-- Strategie-Erklärungen -->
-      <div style="margin-top:12px;padding:10px 12px;border:0.5px solid var(--border);border-radius:var(--radius);font-size:11px;color:var(--muted);line-height:1.8;">
-        <b style="color:var(--text);display:block;margin-bottom:4px;">Alle Strategien im Überblick</b>
-        <b style="color:var(--text);">Günstigster − x €/% </b>→ Zielpreis liegt x € oder x % unter dem günstigsten Konkurrenten. Gut für aggressive Preisführerschaft.<br>
-        <b style="color:var(--text);">Günstigster + x €/% </b>→ Zielpreis liegt knapp über dem günstigsten Konkurrenten. Maximiert Marge bei guter Position.<br>
-        <b style="color:var(--text);">UVP − Rabatt % </b>→ Fixer Rabatt auf die UVP unabhängig vom Markt. Gut als Catchall-Regel (P1).<br>
-        <b style="color:var(--text);">Zielposition </b>→ Strebt Platz 1 (−10 €) oder Platz 2+ (gleicher Preis) an.<br>
-        <b style="color:var(--text);">Min / Max % </b>→ Definiert einen Preiskorridor als % Rabatt auf UVP. Der Zielpreis folgt dem Markt — aber nie unter Min und nie über Max. Ideal für saisonale Budgetgrenzen.
-      </div>
+
     </div>
 
     <!-- Hinzufügen + CSV Aktionen -->
@@ -1232,6 +1217,16 @@
           </tbody>
         </table>
       </div>
+    </div>
+
+    <!-- Alle Strategien im Überblick -->
+    <div style="margin-top:1rem;background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.25rem;font-size:11px;color:var(--muted);line-height:1.8;">
+      <b style="color:var(--text);display:block;margin-bottom:6px;">Alle Strategien im Überblick</b>
+      <b style="color:var(--text);">Günstigster − x €/% </b>→ Zielpreis liegt x € oder x % unter dem günstigsten Konkurrenten. Gut für aggressive Preisführerschaft.<br>
+      <b style="color:var(--text);">Günstigster + x €/% </b>→ Zielpreis liegt knapp über dem günstigsten Konkurrenten. Maximiert Marge bei guter Position.<br>
+      <b style="color:var(--text);">UVP − Rabatt % </b>→ Fixer Rabatt auf die UVP unabhängig vom Markt. Gut als Catchall-Regel (P1).<br>
+      <b style="color:var(--text);">Zielposition </b>→ Strebt Platz 1 (−10 €) oder Platz 2+ (gleicher Preis) an.<br>
+      <b style="color:var(--text);">Min / Max % </b>→ Definiert einen Preiskorridor als % Rabatt auf UVP. Der Zielpreis folgt dem Markt — aber nie unter Min und nie über Max. Ideal für saisonale Budgetgrenzen.
     </div>
 
   </div>
