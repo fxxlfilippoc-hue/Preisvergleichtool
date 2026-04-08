@@ -423,6 +423,24 @@
   }
   .strat-src-btn:hover { background: var(--surface2); color: var(--text); }
   .strat-src-btn.active { background: var(--text); color: #fff; border-color: var(--text); }
+  .prio-btn {
+    font-family: 'DM Sans', sans-serif;
+    padding: 10px 20px; border-radius: var(--radius);
+    border: 0.5px solid var(--border);
+    background: var(--surface); color: var(--muted);
+    cursor: pointer; transition: all 0.15s; text-align: center;
+  }
+  .prio-btn:hover { border-color: rgba(0,0,0,0.2); color: var(--text); }
+  .prio-btn.active { background: var(--text); color: #fff; border-color: var(--text); }
+  .strat-type-btn {
+    font-family: 'DM Sans', sans-serif;
+    padding: 10px 12px; border-radius: var(--radius);
+    border: 0.5px solid var(--border);
+    background: var(--surface); color: var(--muted);
+    cursor: pointer; transition: all 0.15s; text-align: left;
+  }
+  .strat-type-btn:hover { border-color: rgba(0,0,0,0.2); color: var(--text); }
+  .strat-type-btn.active { background: var(--blue-soft); color: var(--blue); border-color: var(--blue); }
   /* ══ CUBE PANEL STYLES ══ */
   #cube-panel { display: none; }
   #cube-panel.active { display: block; }
@@ -1035,7 +1053,7 @@
     <p class="section-title">Preisstrategien</p>
 
     <!-- Datenquelle Auswahl -->
-    <div style="display:flex;gap:8px;margin-bottom:1.25rem;">
+    <div style="display:flex;gap:8px;margin-bottom:1.5rem;">
       <button class="strat-src-btn active" data-src="cube" onclick="stratSelectSource(this,'cube')">Cube Fahrrad</button>
       <button class="strat-src-btn" data-src="fahrraeder" onclick="stratSelectSource(this,'fahrraeder')">Fahrräder</button>
       <button class="strat-src-btn" data-src="zubehoer" onclick="stratSelectSource(this,'zubehoer')">Zubehör</button>
@@ -1044,23 +1062,37 @@
     <!-- Status Banner -->
     <div id="stratStatusBanner" style="display:none;margin-bottom:1rem;padding:10px 14px;border-radius:var(--radius);font-size:12px;"></div>
 
-    <!-- Regel hinzufügen -->
+    <!-- ── SCHRITT 1: PRIORITÄT ── -->
     <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1.1rem 1.25rem;margin-bottom:1rem;">
-      <div style="font-size:12px;font-weight:500;margin-bottom:12px;color:var(--text);">+ Neue Regel hinzufügen</div>
-      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:10px;">1 — Priorität</div>
+      <div style="display:flex;gap:8px;">
+        <button class="prio-btn active" data-prio="1" onclick="stratSetPrio(this,1)">
+          <div style="font-size:13px;font-weight:700;">P1</div>
+          <div style="font-size:10px;color:inherit;opacity:0.75;">Catchall</div>
+        </button>
+        <button class="prio-btn" data-prio="2" onclick="stratSetPrio(this,2)">
+          <div style="font-size:13px;font-weight:700;">P2</div>
+          <div style="font-size:10px;color:inherit;opacity:0.75;">Semi-spezifisch</div>
+        </button>
+        <button class="prio-btn" data-prio="3" onclick="stratSetPrio(this,3)">
+          <div style="font-size:13px;font-weight:700;">P3</div>
+          <div style="font-size:10px;color:inherit;opacity:0.75;">Spezifisch</div>
+        </button>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:var(--muted);">
+        <b style="color:var(--text);">P1</b> = gilt für alle Artikel (Catchall) ·
+        <b style="color:var(--text);">P2</b> = gilt für eine Season oder Marke ·
+        <b style="color:var(--text);">P3</b> = gilt für Season + Marke + Warengruppe · Höchste passende Priorität gewinnt
+      </div>
+    </div>
 
-        <div class="fg">
-          <label>Priorität</label>
-          <select id="newPrio" style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;">
-            <option value="1">P1 — Catchall</option>
-            <option value="2">P2 — Semi-spezifisch</option>
-            <option value="3" selected>P3 — Spezifisch</option>
-          </select>
-        </div>
-
+    <!-- ── SCHRITT 2: FILTER ── -->
+    <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1.1rem 1.25rem;margin-bottom:1rem;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:10px;">2 — Filter <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;">(leer = gilt für alle)</span></div>
+      <div style="display:flex;flex-wrap:wrap;gap:16px;">
         <div class="fg">
           <label>Season</label>
-          <select id="newSeason" style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;min-width:100px;">
+          <select id="newSeason" style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;min-width:110px;">
             <option value="alle">Alle</option>
             <option value="2026">2026</option>
             <option value="2025">2025</option>
@@ -1068,64 +1100,106 @@
             <option value="Aktion">Aktion</option>
           </select>
         </div>
-
         <div class="fg">
           <label>Marke</label>
-          <input id="newMarke" type="text" placeholder="z.B. Cube oder alle" value="alle"
+          <input id="newMarke" type="text" placeholder="alle" value="alle"
             style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;width:130px;">
         </div>
-
         <div class="fg">
-          <label>Strategie</label>
-          <select id="newStrategie" onchange="stratUpdateWertLabel()" style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;min-width:170px;">
-            <option value="markt_minus_x">Günstigster − x €</option>
-            <option value="markt_minus_pct">Günstigster − x %</option>
-            <option value="uvp_minus_rabatt">UVP − Rabatt %</option>
-            <option value="günstigster_plus_x">Günstigster + x €</option>
-            <option value="günstigster_plus_pct">Günstigster + x %</option>
-            <option value="zielposition">Zielposition (Platz #)</option>
-          </select>
-        </div>
-
-        <div class="fg">
-          <label id="newWertLabel">Wert (€)</label>
-          <input id="newWert" type="number" value="10" min="0" step="1"
-            style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;width:80px;">
-        </div>
-
-        <div class="fg">
-          <label>Max. Rabatt %</label>
-          <input id="newMaxRabatt" type="number" value="30" min="0" max="100" step="1"
-            style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;width:70px;">
-        </div>
-
-        <div class="fg" style="align-self:flex-end;">
-          <button onclick="stratAddRule()" style="font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:7px 18px;border-radius:var(--radius);border:none;background:var(--text);color:#fff;cursor:pointer;height:34px;">
-            Hinzufügen
-          </button>
+          <label>Warengruppe</label>
+          <input id="newWarengruppe" type="text" placeholder="z.B. Fahrradzubehör"
+            style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;width:150px;">
         </div>
       </div>
     </div>
 
-    <!-- Upload + Aktionen -->
+    <!-- ── SCHRITT 3: STRATEGIE ── -->
+    <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1.1rem 1.25rem;margin-bottom:1rem;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:12px;">3 — Strategie</div>
+
+      <!-- Strategie Auswahl Cards -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;">
+        <button class="strat-type-btn active" data-strat="markt_minus_x" onclick="stratSetType(this,'markt_minus_x')">
+          <div style="font-size:12px;font-weight:600;">Günstigster − x €</div>
+          <div style="font-size:10px;opacity:0.7;margin-top:2px;">Fester Abstand zum günstigsten</div>
+        </button>
+        <button class="strat-type-btn" data-strat="markt_minus_pct" onclick="stratSetType(this,'markt_minus_pct')">
+          <div style="font-size:12px;font-weight:600;">Günstigster − x %</div>
+          <div style="font-size:10px;opacity:0.7;margin-top:2px;">Prozentualer Abstand</div>
+        </button>
+        <button class="strat-type-btn" data-strat="günstigster_plus_x" onclick="stratSetType(this,'günstigster_plus_x')">
+          <div style="font-size:12px;font-weight:600;">Günstigster + x €</div>
+          <div style="font-size:10px;opacity:0.7;margin-top:2px;">Knapp über dem günstigsten</div>
+        </button>
+        <button class="strat-type-btn" data-strat="günstigster_plus_pct" onclick="stratSetType(this,'günstigster_plus_pct')">
+          <div style="font-size:12px;font-weight:600;">Günstigster + x %</div>
+          <div style="font-size:10px;opacity:0.7;margin-top:2px;">Prozentual über günstigstem</div>
+        </button>
+        <button class="strat-type-btn" data-strat="uvp_minus_rabatt" onclick="stratSetType(this,'uvp_minus_rabatt')">
+          <div style="font-size:12px;font-weight:600;">UVP − Rabatt %</div>
+          <div style="font-size:10px;opacity:0.7;margin-top:2px;">Fixer Rabatt auf UVP</div>
+        </button>
+        <button class="strat-type-btn" data-strat="zielposition" onclick="stratSetType(this,'zielposition')">
+          <div style="font-size:12px;font-weight:600;">Zielposition</div>
+          <div style="font-size:10px;opacity:0.7;margin-top:2px;">Platz 1, 2, 3 anstreben</div>
+        </button>
+        <button class="strat-type-btn" data-strat="min_max" onclick="stratSetType(this,'min_max')" style="grid-column:span 2;">
+          <div style="font-size:12px;font-weight:600;">Min / Max Preis (% Rabatt UVP)</div>
+          <div style="font-size:10px;opacity:0.7;margin-top:2px;">Zielpreis zwischen Min & Max — orientiert am Marktpreis</div>
+        </button>
+      </div>
+
+      <!-- Wert-Eingaben (kontextabhängig) -->
+      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;padding:10px 12px;background:var(--surface2);border-radius:var(--radius);">
+        <div class="fg" id="wertField">
+          <label id="newWertLabel">Wert (€)</label>
+          <input id="newWert" type="number" value="10" min="0" step="0.5"
+            style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;width:80px;">
+        </div>
+        <div class="fg" id="minPctField" style="display:none;">
+          <label>Min Preis (% Rabatt UVP)</label>
+          <input id="newMinPct" type="number" value="20" min="0" max="80" step="1"
+            style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;width:80px;">
+        </div>
+        <div class="fg" id="maxPctField" style="display:none;">
+          <label>Max Preis (% Rabatt UVP)</label>
+          <input id="newMaxPct" type="number" value="35" min="0" max="80" step="1"
+            style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;width:80px;">
+        </div>
+        <div class="fg" id="maxRabattField">
+          <label>Max. Rabatt auf UVP %</label>
+          <input id="newMaxRabatt" type="number" value="30" min="0" max="80" step="1"
+            style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;width:80px;">
+        </div>
+        <div style="font-size:11px;color:var(--muted);align-self:center;max-width:300px;" id="stratHint">
+          Zielpreis = Günstigster Marktpreis − 10 € (gerundet auf .99, nie unter Max. Rabatt)
+        </div>
+      </div>
+
+      <!-- Strategie-Erklärungen -->
+      <div style="margin-top:12px;padding:10px 12px;border:0.5px solid var(--border);border-radius:var(--radius);font-size:11px;color:var(--muted);line-height:1.8;">
+        <b style="color:var(--text);display:block;margin-bottom:4px;">Alle Strategien im Überblick</b>
+        <b style="color:var(--text);">Günstigster − x €/% </b>→ Zielpreis liegt x € oder x % unter dem günstigsten Konkurrenten. Gut für aggressive Preisführerschaft.<br>
+        <b style="color:var(--text);">Günstigster + x €/% </b>→ Zielpreis liegt knapp über dem günstigsten Konkurrenten. Maximiert Marge bei guter Position.<br>
+        <b style="color:var(--text);">UVP − Rabatt % </b>→ Fixer Rabatt auf die UVP unabhängig vom Markt. Gut als Catchall-Regel (P1).<br>
+        <b style="color:var(--text);">Zielposition </b>→ Strebt Platz 1 (−10 €) oder Platz 2+ (gleicher Preis) an.<br>
+        <b style="color:var(--text);">Min / Max % </b>→ Definiert einen Preiskorridor als % Rabatt auf UVP. Der Zielpreis folgt dem Markt — aber nie unter Min und nie über Max. Ideal für saisonale Budgetgrenzen.
+      </div>
+    </div>
+
+    <!-- Hinzufügen + CSV Aktionen -->
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;flex-wrap:wrap;">
+      <button onclick="stratAddRule()" style="font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:8px 20px;border-radius:var(--radius);border:none;background:var(--text);color:#fff;cursor:pointer;">
+        + Regel hinzufügen
+      </button>
+      <div style="width:1px;height:20px;background:var(--border);margin:0 4px;"></div>
       <input type="file" id="stratCsvInput" accept=".csv" style="display:none;" onchange="stratLoadCSV(this.files[0])">
-      <button class="pill" onclick="document.getElementById('stratCsvInput').click()" style="height:32px;padding:0 14px;font-size:12px;">
-        CSV hochladen
-      </button>
-      <button class="pill" onclick="stratDownloadTemplate()" style="height:32px;padding:0 14px;font-size:12px;color:var(--muted);">
-        Vorlage herunterladen
-      </button>
-      <button class="pill" onclick="stratExportCSV()" style="height:32px;padding:0 14px;font-size:12px;color:var(--muted);">
-        Regeln exportieren
-      </button>
+      <button class="pill" onclick="document.getElementById('stratCsvInput').click()" style="height:32px;padding:0 14px;font-size:12px;">CSV hochladen</button>
+      <button class="pill" onclick="stratDownloadTemplate()" style="height:32px;padding:0 14px;font-size:12px;color:var(--muted);">Vorlage herunterladen</button>
+      <button class="pill" onclick="stratExportCSV()" style="height:32px;padding:0 14px;font-size:12px;color:var(--muted);">Regeln exportieren</button>
       <div style="margin-left:auto;display:flex;gap:8px;">
-        <button onclick="stratReset()" style="font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;padding:7px 16px;border-radius:var(--radius);border:0.5px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;">
-          Zurücksetzen
-        </button>
-        <button onclick="stratApply()" style="font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:7px 20px;border-radius:var(--radius);border:none;background:var(--accent);color:#fff;cursor:pointer;">
-          Strategie anwenden
-        </button>
+        <button onclick="stratReset()" style="font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;padding:7px 16px;border-radius:var(--radius);border:0.5px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;">Zurücksetzen</button>
+        <button onclick="stratApply()" style="font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:7px 20px;border-radius:var(--radius);border:none;background:var(--accent);color:#fff;cursor:pointer;">Strategie anwenden</button>
       </div>
     </div>
 
@@ -1133,7 +1207,7 @@
     <div class="table-wrap">
       <div class="table-header" style="padding:0.75rem 1.25rem;">
         <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-size:13px;font-weight:500;">Regeln</span>
+          <span style="font-size:13px;font-weight:500;">Aktuelle Regeln</span>
           <span id="stratRuleCount" style="font-size:11px;color:var(--muted);"></span>
         </div>
         <div style="font-size:11px;color:var(--muted);">Höhere Prioritätszahl = spezifischer = gewinnt</div>
@@ -1142,37 +1216,21 @@
         <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
           <thead>
             <tr style="background:#F4F3EF;">
-              <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;width:80px;">Priorität</th>
+              <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;width:70px;">Prio</th>
               <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;">Season</th>
               <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;">Marke</th>
-              <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;width:170px;">Strategie</th>
-              <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;width:80px;">Wert</th>
-              <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;width:90px;">Max. Rabatt</th>
-              <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;width:80px;">Aktiv</th>
-              <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;">Gilt für</th>
-              <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;width:60px;">Löschen</th>
+              <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;">Warengruppe</th>
+              <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;width:180px;">Strategie</th>
+              <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;width:100px;">Wert</th>
+              <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;width:80px;">Max. Rab.</th>
+              <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;width:70px;">Aktiv</th>
+              <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;width:50px;">✕</th>
             </tr>
           </thead>
           <tbody id="stratTableBody">
             <tr><td colspan="9" style="padding:2rem;text-align:center;color:var(--muted);font-size:12px;">Noch keine Regeln — füge eine Regel hinzu oder lade eine CSV hoch</td></tr>
           </tbody>
         </table>
-      </div>
-    </div>
-
-    <!-- Format Info -->
-    <div style="margin-top:1rem;background:var(--blue-soft);border:0.5px solid rgba(24,95,165,0.2);border-radius:var(--radius-lg);padding:1rem 1.25rem;">
-      <div style="font-size:12px;font-weight:600;color:var(--blue);margin-bottom:6px;">📋 CSV Format (Semikolon-getrennt)</div>
-      <div style="font-family:monospace;font-size:11px;color:var(--blue);line-height:1.8;background:rgba(24,95,165,0.06);border-radius:6px;padding:8px 12px;">
-        prioritaet;season;marke;strategie;wert;max_rabatt_pct;aktiv<br>
-        1;alle;alle;uvp_minus_rabatt;30;;ja<br>
-        2;2026;alle;markt_minus_x;10;30;ja<br>
-        3;2026;Cube;markt_minus_pct;5;25;ja
-      </div>
-      <div style="margin-top:8px;font-size:11px;color:var(--muted);line-height:1.7;">
-        <b style="color:var(--text);">Strategien:</b>
-        markt_minus_x · markt_minus_pct · zielposition · uvp_minus_rabatt · günstigster_plus_x · günstigster_plus_pct<br>
-        <b style="color:var(--text);">Hierarchie:</b> P1 = Catchall · P2 = Semi-spezifisch · P3 = Spezifisch — höchste passende Priorität gewinnt
       </div>
     </div>
 
@@ -1330,6 +1388,7 @@ function updateDashboard(rows) {
         sku:               sku,
         name:              r['Artikelbezeichnung'] || prod['name'] || '',
         brand:             r['Marke'] || prod['brand'] || '',
+        warengruppe:       (r['Benutzerdefiniert'] || '').trim(),
         my_price:          myPrice,
         cheapest_price:    cheapPrice,
         cheapest_provider: provider,
@@ -2332,148 +2391,213 @@ function toggleCubePanel(isCube){
 var stratData = { cube: [], fahrraeder: [], zubehoer: [] };
 var stratCurrentSrc = 'cube';
 var stratApplied = { cube: false, fahrraeder: false, zubehoer: false };
+var stratCurrentPrio = 1;
+var stratCurrentType = 'markt_minus_x';
+
+var stratHints = {
+  markt_minus_x:       'Zielpreis = Günstigster − x € (gerundet auf .99, nie unter Max. Rabatt auf UVP)',
+  markt_minus_pct:     'Zielpreis = Günstigster × (1 − x/100) (gerundet auf .99)',
+  günstigster_plus_x:  'Zielpreis = Günstigster + x € — nie über UVP',
+  günstigster_plus_pct:'Zielpreis = Günstigster × (1 + x/100) — nie über UVP',
+  uvp_minus_rabatt:    'Zielpreis = UVP × (1 − x/100) — gut als Catchall-Regel P1',
+  zielposition:        'Platz 1 → Günstigster − 10 €  |  Platz 2+ → gleicher Preis wie Günstigster',
+  min_max:             'Zielpreis folgt dem Marktpreis — aber nie unter UVP×(1−Max%) und nie über UVP×(1−Min%)'
+};
+var stratWertLabels = {
+  markt_minus_x:'Wert (€)', markt_minus_pct:'Wert (%)',
+  günstigster_plus_x:'Wert (€)', günstigster_plus_pct:'Wert (%)',
+  uvp_minus_rabatt:'Rabatt (%)', zielposition:'Platz #', min_max:''
+};
 
 function stratSelectSource(btn, src) {
   document.querySelectorAll('.strat-src-btn').forEach(function(b) { b.classList.remove('active'); });
   btn.classList.add('active');
   stratCurrentSrc = src;
+  // Sync main dropdown
+  var sel = document.getElementById('sourceSelect');
+  if (sel) {
+    sel.value = src;
+    onSourceChange(src);
+  }
   stratRenderTable();
   stratShowStatus();
 }
 
-function stratSrcLabel(src) {
-  return src === 'cube' ? 'Cube Fahrrad' : src === 'fahrraeder' ? 'Fahrräder' : 'Zubehör';
+function stratSetPrio(btn, prio) {
+  document.querySelectorAll('.prio-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  stratCurrentPrio = prio;
 }
 
-function stratLoadCSV(file) {
-  if (!file) return;
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    var rows = parseCSV(e.target.result);
-    if (!rows.length) { stratShowBanner('Keine Daten gefunden.', 'error'); return; }
-    var rules = rows.map(function(r) {
-      return {
-        prioritaet:     parseInt(r['prioritaet'] || r['priorität'] || r['Priorität'] || '1') || 1,
-        season:         (r['season'] || r['Season'] || 'alle').trim(),
-        marke:          (r['marke']  || r['Marke']  || 'alle').trim(),
-        strategie:      (r['strategie'] || r['Strategie'] || '').trim().toLowerCase(),
-        wert:           parseFloat(r['wert'] || r['Wert'] || '0') || 0,
-        max_rabatt_pct: parseFloat(r['max_rabatt_pct'] || '30') || 30,
-        aktiv:          (r['aktiv'] || r['Aktiv'] || 'ja').trim().toLowerCase() !== 'nein'
-      };
-    }).sort(function(a, b) { return b.prioritaet - a.prioritaet; });
-    stratData[stratCurrentSrc] = rules;
-    stratApplied[stratCurrentSrc] = false;
-    stratRenderTable();
-    stratShowBanner(rules.length + ' Regeln für ' + stratSrcLabel(stratCurrentSrc) + ' geladen. Klick auf "Strategie anwenden" um Zielpreise zu berechnen.', 'info');
+function stratSetType(btn, type) {
+  document.querySelectorAll('.strat-type-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  stratCurrentType = type;
+  // Show/hide fields
+  var isMinMax = type === 'min_max';
+  var wf = document.getElementById('wertField');
+  var mf = document.getElementById('minPctField');
+  var xf = document.getElementById('maxPctField');
+  var rf = document.getElementById('maxRabattField');
+  var lbl = document.getElementById('newWertLabel');
+  var hint = document.getElementById('stratHint');
+  if (wf)  wf.style.display  = isMinMax ? 'none' : 'flex';
+  if (mf)  mf.style.display  = isMinMax ? 'flex' : 'none';
+  if (xf)  xf.style.display  = isMinMax ? 'flex' : 'none';
+  if (rf)  rf.style.display  = isMinMax ? 'none' : 'flex';
+  if (lbl) lbl.textContent   = stratWertLabels[type] || 'Wert';
+  if (hint) hint.textContent = stratHints[type] || '';
+}
+
+function stratSrcLabel(src) {
+  return src==='cube'?'Cube Fahrrad':src==='fahrraeder'?'Fahrräder':'Zubehör';
+}
+
+function stratAddRule() {
+  var season = document.getElementById('newSeason').value || 'alle';
+  var marke  = (document.getElementById('newMarke').value||'alle').trim();
+  var wg     = (document.getElementById('newWarengruppe').value||'').trim();
+  var strat  = stratCurrentType;
+  var wert   = parseFloat(document.getElementById('newWert') ? document.getElementById('newWert').value : '0') || 0;
+  var minPct = parseFloat(document.getElementById('newMinPct') ? document.getElementById('newMinPct').value : '20') || 20;
+  var maxPct = parseFloat(document.getElementById('newMaxPct') ? document.getElementById('newMaxPct').value : '35') || 35;
+  var maxRab = parseFloat(document.getElementById('newMaxRabatt') ? document.getElementById('newMaxRabatt').value : '30') || 30;
+
+  var rule = {
+    prioritaet: stratCurrentPrio,
+    season: season, marke: marke, warengruppe: wg,
+    strategie: strat, wert: wert,
+    min_pct: minPct, max_pct: maxPct,
+    max_rabatt_pct: maxRab, aktiv: true
   };
-  reader.readAsText(file, 'UTF-8');
-  document.getElementById('stratCsvInput').value = '';
+  stratData[stratCurrentSrc].push(rule);
+  stratData[stratCurrentSrc].sort(function(a,b){ return b.prioritaet-a.prioritaet; });
+  stratApplied[stratCurrentSrc] = false;
+  stratRenderTable();
+  stratShowBanner('Regel hinzugefügt — klick auf "Strategie anwenden" um Zielpreise zu berechnen.', 'info');
+}
+
+function stratDeleteRule(idx) {
+  stratData[stratCurrentSrc].splice(idx, 1);
+  stratApplied[stratCurrentSrc] = false;
+  stratRenderTable();
 }
 
 function stratToggleRule(idx) {
   var rules = stratData[stratCurrentSrc];
-  if (rules[idx]) {
-    rules[idx].aktiv = !rules[idx].aktiv;
-    stratApplied[stratCurrentSrc] = false;
-    stratRenderTable();
-  }
+  if (rules[idx]) { rules[idx].aktiv = !rules[idx].aktiv; stratApplied[stratCurrentSrc]=false; stratRenderTable(); }
 }
 
 function stratRenderTable() {
-  var rules  = stratData[stratCurrentSrc];
-  var tbody  = document.getElementById('stratTableBody');
-  var cntEl  = document.getElementById('stratRuleCount');
+  var rules = stratData[stratCurrentSrc];
+  var tbody = document.getElementById('stratTableBody');
+  var cntEl = document.getElementById('stratRuleCount');
   if (!tbody) return;
-  if (!rules || !rules.length) {
-    tbody.innerHTML = '<tr><td colspan="8" style="padding:2rem;text-align:center;color:var(--muted);font-size:12px;">Noch keine Strategie für ' + stratSrcLabel(stratCurrentSrc) + ' geladen</td></tr>';
-    if (cntEl) cntEl.textContent = '';
-    return;
+  if (!rules||!rules.length) {
+    tbody.innerHTML = '<tr><td colspan="9" style="padding:2rem;text-align:center;color:var(--muted);font-size:12px;">Noch keine Regeln für '+stratSrcLabel(stratCurrentSrc)+'</td></tr>';
+    if(cntEl) cntEl.textContent=''; return;
   }
-  if (cntEl) cntEl.textContent = rules.length + ' Regeln';
+  if(cntEl) cntEl.textContent = rules.length+' Regeln';
   var labels = {
-    'markt_minus_x':'Günstigster − x €','markt_minus_pct':'Günstigster − x %',
-    'zielposition':'Zielposition #','uvp_minus_rabatt':'UVP − Rabatt %',
-    'günstigster_plus_x':'Günstigster + x €','günstigster_plus_pct':'Günstigster + x %'
+    markt_minus_x:'Günstigster − x €', markt_minus_pct:'Günstigster − x %',
+    günstigster_plus_x:'Günstigster + x €', günstigster_plus_pct:'Günstigster + x %',
+    uvp_minus_rabatt:'UVP − Rabatt %', zielposition:'Zielposition', min_max:'Min / Max %'
   };
+  var pBg  = {1:'#F3F4F6', 2:'#FFFBEB', 3:'#EBF3FC'};
+  var pClr = {1:'#4B5563', 2:'#92400E', 3:'#185FA5'};
   tbody.innerHTML = rules.map(function(r, i) {
-    var prio = r.prioritaet;
-    var prioBg  = prio===1?'#F3F4F6':prio===2?'#FFFBEB':'#EBF3FC';
-    var prioClr = prio===1?'#4B5563':prio===2?'#92400E':'#185FA5';
-    var stratLabel = labels[r.strategie] || r.strategie;
-    var wertStr = r.strategie==='uvp_minus_rabatt'?r.wert+'%':r.strategie==='zielposition'?'Platz '+r.wert:r.strategie.indexOf('pct')>-1?r.wert+'%':r.wert+' €';
-    var scopeStr = (r.season!=='alle'?r.season:'Alle Seasons')+' · '+(r.marke!=='alle'?r.marke:'Alle Marken');
-    var isActive = r.aktiv;
-    return '<tr style="background:#fff;opacity:'+(isActive?'1':'0.45')+';border-bottom:0.5px solid #e8e6e0;">'+
-      '<td style="padding:9px 12px;"><span style="background:'+prioBg+';color:'+prioClr+';font-size:11px;font-weight:700;padding:2px 9px;border-radius:99px;">P'+prio+'</span></td>'+
-      '<td style="padding:9px 12px;font-size:12px;">'+(r.season==='alle'?'<span style="color:#aaa;">alle</span>':'<b>'+r.season+'</b>')+'</td>'+
-      '<td style="padding:9px 12px;font-size:12px;">'+(r.marke==='alle'?'<span style="color:#aaa;">alle</span>':'<b>'+r.marke+'</b>')+'</td>'+
-      '<td style="padding:9px 12px;"><span style="background:var(--surface2);font-size:11px;font-weight:500;padding:3px 9px;border-radius:99px;">'+stratLabel+'</span></td>'+
+    var isAct = r.aktiv;
+    var wertStr = r.strategie==='min_max'
+      ? 'Min '+r.min_pct+'% / Max '+r.max_pct+'%'
+      : r.strategie==='uvp_minus_rabatt'||r.strategie.indexOf('pct')>-1 ? r.wert+'%'
+      : r.strategie==='zielposition' ? 'Platz '+r.wert : r.wert+' €';
+
+    var toggleBtn = document.createElement('button');
+    toggleBtn.style.cssText = 'font-family:sans-serif;font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px;cursor:pointer;border:0.5px solid;background:'+(isAct?'var(--green-soft);color:var(--green);border-color:var(--green)':'var(--surface2);color:var(--muted);border-color:var(--border)');
+    toggleBtn.textContent = isAct?'Aktiv':'Inaktiv';
+    toggleBtn.onclick = (function(ii){return function(){stratToggleRule(ii);};})(i);
+
+    var delBtn = document.createElement('button');
+    delBtn.style.cssText = 'font-size:14px;color:#c0392b;background:none;border:none;cursor:pointer;padding:2px 6px;';
+    delBtn.textContent = '×';
+    delBtn.onclick = (function(ii){return function(){stratDeleteRule(ii);};})(i);
+
+    var tr = document.createElement('tr');
+    tr.style.cssText = 'background:#fff;opacity:'+(isAct?'1':'0.5')+';border-bottom:0.5px solid #e8e6e0;';
+    tr.innerHTML =
+      '<td style="padding:9px 12px;"><span style="background:'+(pBg[r.prioritaet]||'#eee')+';color:'+(pClr[r.prioritaet]||'#555')+';font-size:11px;font-weight:700;padding:2px 9px;border-radius:99px;">P'+r.prioritaet+'</span></td>'+
+      '<td style="padding:9px 12px;font-size:12px;">'+(r.season&&r.season!=='alle'?'<b>'+r.season+'</b>':'<span style="color:#aaa">alle</span>')+'</td>'+
+      '<td style="padding:9px 12px;font-size:12px;">'+(r.marke&&r.marke!=='alle'?'<b>'+r.marke+'</b>':'<span style="color:#aaa">alle</span>')+'</td>'+
+      '<td style="padding:9px 12px;font-size:12px;">'+(r.warengruppe?'<b>'+r.warengruppe+'</b>':'<span style="color:#aaa">—</span>')+'</td>'+
+      '<td style="padding:9px 12px;"><span style="background:var(--surface2);font-size:11px;font-weight:500;padding:3px 9px;border-radius:99px;">'+(labels[r.strategie]||r.strategie)+'</span></td>'+
       '<td style="padding:9px 12px;font-family:monospace;font-size:12px;font-weight:600;">'+wertStr+'</td>'+
       '<td style="padding:9px 12px;font-size:12px;color:#888;">'+(r.max_rabatt_pct?r.max_rabatt_pct+'%':'—')+'</td>'+
-      '<td style="padding:9px 12px;text-align:center;">'+
-        (function(ri,ra){var btn=document.createElement('button');btn.style.cssText='font-family:sans-serif;font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px;cursor:pointer;border:0.5px solid;background:'+(ra?'var(--green-soft);color:var(--green);border-color:var(--green)':'var(--surface2);color:var(--muted);border-color:var(--border)');btn.textContent=ra?'Aktiv':'Inaktiv';btn.onclick=function(){stratToggleRule(ri);};return '<td style="padding:9px 12px;text-align:center;">'+btn.outerHTML+'</td>';})(i,isActive)+
-
-      '<td style="padding:9px 12px;font-size:11px;color:#888;">'+scopeStr+'</td>'+
-      '<td style="padding:9px 12px;text-align:center;"><button onclick="stratDeleteRule('+i+')" style="font-family:sans-serif;font-size:11px;color:#c0392b;background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:4px;" title="Löschen">✕</button></td>'+
-      '</tr>';
+      '<td style="padding:9px 12px;text-align:center;"></td>'+
+      '<td style="padding:9px 12px;text-align:center;"></td>';
+    var cells = tr.querySelectorAll('td');
+    cells[7].appendChild(toggleBtn);
+    cells[8].appendChild(delBtn);
+    return tr.outerHTML;
   }).join('');
 }
 
 function stratShowStatus() {
   var rules = stratData[stratCurrentSrc];
-  if (!rules || !rules.length) { stratShowBanner('', ''); return; }
-  if (stratApplied[stratCurrentSrc]) {
-    stratShowBanner('✓ Strategie für '+stratSrcLabel(stratCurrentSrc)+' ist aktiv und angewendet.','success');
-  } else {
-    stratShowBanner('Strategie geladen aber noch nicht angewendet — klick auf "Strategie anwenden".','warning');
-  }
+  if(!rules||!rules.length){stratShowBanner('','');return;}
+  stratShowBanner(stratApplied[stratCurrentSrc]?'✓ Strategie für '+stratSrcLabel(stratCurrentSrc)+' ist aktiv.':'Strategie geladen — klick auf "Strategie anwenden".', stratApplied[stratCurrentSrc]?'success':'warning');
 }
 
 function stratShowBanner(msg, type) {
   var el = document.getElementById('stratStatusBanner');
-  if (!el) return;
-  if (!msg) { el.style.display='none'; return; }
-  var styles = {
-    info:    'background:var(--blue-soft);color:var(--blue);border:0.5px solid rgba(24,95,165,0.2);',
-    success: 'background:var(--green-soft);color:var(--green);border:0.5px solid rgba(29,158,117,0.2);',
-    warning: 'background:var(--amber-soft);color:var(--amber);border:0.5px solid rgba(186,117,23,0.2);',
-    error:   'background:var(--accent-soft);color:var(--accent);border:0.5px solid rgba(230,59,43,0.2);'
-  };
-  el.style.cssText = 'display:block;margin-bottom:1rem;padding:10px 14px;border-radius:var(--radius);font-size:12px;font-weight:500;'+(styles[type]||styles.info);
-  el.textContent = msg;
+  if(!el) return;
+  if(!msg){el.style.display='none';return;}
+  var s={info:'background:var(--blue-soft);color:var(--blue);border:0.5px solid rgba(24,95,165,0.2);',success:'background:var(--green-soft);color:var(--green);border:0.5px solid rgba(29,158,117,0.2);',warning:'background:var(--amber-soft);color:var(--amber);border:0.5px solid rgba(186,117,23,0.2);',error:'background:var(--accent-soft);color:var(--accent);border:0.5px solid rgba(230,59,43,0.2);'};
+  el.style.cssText='display:block;margin-bottom:1rem;padding:10px 14px;border-radius:var(--radius);font-size:12px;font-weight:500;'+(s[type]||s.info);
+  el.textContent=msg;
 }
 
 function stratCalcZielpreis(row, rules) {
   var myPrice  = row.my_price;
   var cheapest = row.cheapest_price;
   var uvp      = row.uvp;
-  var season   = ((row.name||'').match(/\b(20\d{2})\b/)||['',''])[1] || 'Aktion';
-  var marke    = row.brand || '';
+  var season   = ((row.name||'').match(/\b(20\d{2})\b/)||['',''])[1]||'Aktion';
+  var marke    = row.brand||'';
+  var wg       = row.warengruppe||'';
+  var baseCheapest = (!isNaN(row.niedrigster)&&row.niedrigster>0)?row.niedrigster:cheapest;
   var active   = rules.filter(function(r){return r.aktiv;});
   active.sort(function(a,b){return b.prioritaet-a.prioritaet;});
-  // Use niedrigster (Mindestpreis) as base price if available
-  var baseCheapest = (!isNaN(row.niedrigster) && row.niedrigster > 0) ? row.niedrigster : cheapest;
-
-  var matched = null;
-  for (var i=0;i<active.length;i++){
+  var matched  = null;
+  for(var i=0;i<active.length;i++){
     var r=active[i];
-    var ms = r.season==='alle'||r.season===season;
-    // Case-insensitive partial match on brand
-    var mm = r.marke==='alle'||marke.toLowerCase().indexOf(r.marke.toLowerCase())>-1;
-    if(ms&&mm){matched=r;break;}
+    var ms=!r.season||r.season==='alle'||r.season===season;
+    var mm=!r.marke||r.marke==='alle'||marke.toLowerCase().indexOf(r.marke.toLowerCase())>-1;
+    var mw=!r.warengruppe||r.warengruppe==='alle'||wg.toLowerCase().indexOf(r.warengruppe.toLowerCase())>-1;
+    if(ms&&mm&&mw){matched=r;break;}
   }
-  if(!matched||isNaN(baseCheapest)||baseCheapest<=0) return null;
-  cheapest = baseCheapest;
+  if(!matched) return null;
+
+  // min_max strategy
+  if(matched.strategie==='min_max'){
+    if(isNaN(uvp)||uvp<=0) return null;
+    var minPrice = uvp*(1-matched.max_pct/100);  // max_pct = bigger discount = lower price
+    var maxPrice = uvp*(1-matched.min_pct/100);  // min_pct = smaller discount = higher price
+    if(isNaN(baseCheapest)||baseCheapest<=0) return Math.floor(maxPrice)+0.99;
+    var target = baseCheapest - 10;
+    target = Math.max(target, minPrice);
+    target = Math.min(target, maxPrice);
+    return Math.round((Math.floor(target)+0.99)*100)/100;
+  }
+
+  if(isNaN(baseCheapest)||baseCheapest<=0) return null;
   var minAllowed=(!isNaN(uvp)&&uvp>0)?uvp*(1-matched.max_rabatt_pct/100):0;
   var raw=null;
   switch(matched.strategie){
-    case 'markt_minus_x':        raw=cheapest-matched.wert; break;
-    case 'markt_minus_pct':      raw=cheapest*(1-matched.wert/100); break;
+    case 'markt_minus_x':        raw=baseCheapest-matched.wert; break;
+    case 'markt_minus_pct':      raw=baseCheapest*(1-matched.wert/100); break;
     case 'uvp_minus_rabatt':     if(!isNaN(uvp)&&uvp>0) raw=uvp*(1-matched.wert/100); break;
-    case 'günstigster_plus_x':   raw=cheapest+matched.wert; break;
-    case 'günstigster_plus_pct': raw=cheapest*(1+matched.wert/100); break;
-    case 'zielposition':         raw=cheapest-(matched.wert>1?0:10); break;
+    case 'günstigster_plus_x':   raw=baseCheapest+matched.wert; break;
+    case 'günstigster_plus_pct': raw=baseCheapest*(1+matched.wert/100); break;
+    case 'zielposition':         raw=baseCheapest-(matched.wert<=1?10:0); break;
     default: return null;
   }
   if(raw===null||isNaN(raw)) return null;
@@ -2485,7 +2609,7 @@ function stratCalcZielpreis(row, rules) {
 
 function stratApply() {
   var rules=stratData[stratCurrentSrc];
-  if(!rules||!rules.length){stratShowBanner('Bitte zuerst eine CSV hochladen.','error');return;}
+  if(!rules||!rules.length){stratShowBanner('Bitte zuerst Regeln hinzufügen.','error');return;}
   var srcDropdown=document.getElementById('sourceSelect');
   var activeSrc=srcDropdown?srcDropdown.value:'';
   if(activeSrc!==stratCurrentSrc){
@@ -2494,11 +2618,7 @@ function stratApply() {
     return;
   }
   var count=0;
-  DATA.table.forEach(function(row){
-    var z=stratCalcZielpreis(row,rules);
-    row.zielpreis=z;
-    if(z!==null) count++;
-  });
+  DATA.table.forEach(function(row){var z=stratCalcZielpreis(row,rules);row.zielpreis=z;if(z!==null)count++;});
   stratApplied[stratCurrentSrc]=true;
   stratShowBanner('✓ Zielpreise berechnet für '+count+' von '+DATA.table.length+' Artikeln.','success');
   if(document.getElementById('tab-preisanpassungen').classList.contains('active')) renderTable();
@@ -2507,68 +2627,60 @@ function stratApply() {
 function stratReset() {
   DATA.table.forEach(function(row){row.zielpreis=undefined;});
   stratApplied[stratCurrentSrc]=false;
-  stratShowBanner('Strategie für '+stratSrcLabel(stratCurrentSrc)+' zurückgesetzt.','warning');
+  stratShowBanner('Zielpreise zurückgesetzt.','warning');
   if(document.getElementById('tab-preisanpassungen').classList.contains('active')) renderTable();
 }
 
+function stratLoadCSV(file) {
+  if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var rows=parseCSV(e.target.result);
+    if(!rows.length){stratShowBanner('Keine Daten gefunden.','error');return;}
+    var rules=rows.map(function(r){
+      return{
+        prioritaet:     parseInt(r['prioritaet']||r['priorität']||'1')||1,
+        season:         (r['season']||'alle').trim(),
+        marke:          (r['marke']||'alle').trim(),
+        warengruppe:    (r['warengruppe']||'').trim(),
+        strategie:      (r['strategie']||'').trim().toLowerCase(),
+        wert:           parseFloat(r['wert']||'0')||0,
+        min_pct:        parseFloat(r['min_pct']||'20')||20,
+        max_pct:        parseFloat(r['max_pct']||'35')||35,
+        max_rabatt_pct: parseFloat(r['max_rabatt_pct']||'30')||30,
+        aktiv:          (r['aktiv']||'ja').trim().toLowerCase()!=='nein'
+      };
+    }).sort(function(a,b){return b.prioritaet-a.prioritaet;});
+    stratData[stratCurrentSrc]=rules;
+    stratApplied[stratCurrentSrc]=false;
+    stratRenderTable();
+    stratShowBanner(rules.length+' Regeln geladen.','info');
+  };
+  reader.readAsText(file,'UTF-8');
+  document.getElementById('stratCsvInput').value='';
+}
+
+function stratExportCSV() {
+  var rules=stratData[stratCurrentSrc];
+  if(!rules||!rules.length){stratShowBanner('Keine Regeln zum Exportieren.','error');return;}
+  var csv='prioritaet;season;marke;warengruppe;strategie;wert;min_pct;max_pct;max_rabatt_pct;aktiv\n';
+  rules.forEach(function(r){csv+=[r.prioritaet,r.season,r.marke,r.warengruppe||'',r.strategie,r.wert,r.min_pct||'',r.max_pct||'',r.max_rabatt_pct,r.aktiv?'ja':'nein'].join(';')+'\n';});
+  var a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
+  a.download='preisstrategie_'+stratCurrentSrc+'.csv';
+  a.click();
+}
+
 function stratDownloadTemplate() {
-  var csv='prioritaet;season;marke;strategie;wert;max_rabatt_pct;aktiv\n'+
-    '1;alle;alle;uvp_minus_rabatt;30;30;ja\n'+
-    '2;2026;alle;markt_minus_x;10;30;ja\n'+
-    '3;2026;Cube;markt_minus_pct;5;25;ja\n'+
-    '2;alle;Cube;günstigster_plus_x;5;30;nein\n'+
-    '3;Aktion;alle;markt_minus_pct;15;40;ja';
+  var csv='prioritaet;season;marke;warengruppe;strategie;wert;min_pct;max_pct;max_rabatt_pct;aktiv\n'+
+    '1;alle;alle;;uvp_minus_rabatt;30;;;30;ja\n'+
+    '2;2026;alle;;markt_minus_x;10;;;30;ja\n'+
+    '3;2026;Cube;;markt_minus_pct;5;;;25;ja\n'+
+    '2;alle;;Fahrradzubehör;min_max;0;20;35;;ja';
   var a=document.createElement('a');
   a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
   a.download='preisstrategie_vorlage.csv';
   a.click();
 }
-
-function stratUpdateWertLabel() {
-  var s = document.getElementById('newStrategie').value;
-  var lbl = document.getElementById('newWertLabel');
-  if (!lbl) return;
-  if (s === 'markt_minus_pct' || s === 'markt_minus_x') lbl.textContent = s.indexOf('pct') > -1 ? 'Wert (%)' : 'Wert (€)';
-  else if (s === 'uvp_minus_rabatt') lbl.textContent = 'Rabatt (%)';
-  else if (s === 'zielposition') lbl.textContent = 'Platz #';
-  else lbl.textContent = s.indexOf('pct') > -1 ? 'Wert (%)' : 'Wert (€)';
-}
-
-function stratAddRule() {
-  var prio   = parseInt(document.getElementById('newPrio').value) || 1;
-  var season = document.getElementById('newSeason').value || 'alle';
-  var marke  = (document.getElementById('newMarke').value || 'alle').trim();
-  var strat  = document.getElementById('newStrategie').value;
-  var wert   = parseFloat(document.getElementById('newWert').value) || 0;
-  var maxRab = parseFloat(document.getElementById('newMaxRabatt').value) || 30;
-  if (!strat) { stratShowBanner('Bitte eine Strategie auswählen.', 'error'); return; }
-  var rule = { prioritaet: prio, season: season, marke: marke || 'alle',
-               strategie: strat, wert: wert, max_rabatt_pct: maxRab, aktiv: true };
-  stratData[stratCurrentSrc].push(rule);
-  stratData[stratCurrentSrc].sort(function(a,b){ return b.prioritaet - a.prioritaet; });
-  stratApplied[stratCurrentSrc] = false;
-  stratRenderTable();
-  stratShowBanner('Regel hinzugefügt. Klick auf "Strategie anwenden" um Zielpreise zu berechnen.', 'info');
-}
-
-function stratDeleteRule(idx) {
-  stratData[stratCurrentSrc].splice(idx, 1);
-  stratApplied[stratCurrentSrc] = false;
-  stratRenderTable();
-}
-
-function stratExportCSV() {
-  var rules = stratData[stratCurrentSrc];
-  if (!rules || !rules.length) { stratShowBanner('Keine Regeln zum Exportieren.', 'error'); return; }
-  var csv = 'prioritaet;season;marke;strategie;wert;max_rabatt_pct;aktiv\n';
-  rules.forEach(function(r) {
-    csv += [r.prioritaet, r.season, r.marke, r.strategie, r.wert, r.max_rabatt_pct, r.aktiv?'ja':'nein'].join(';') + '\n';
-  });
-  var a = document.createElement('a');
-  a.href = 'data:text/csv;charset=utf-8,﻿' + encodeURIComponent(csv);
-  a.download = 'preisstrategie_' + stratCurrentSrc + '.csv';
-  a.click();
-}
-
 
 </script>
