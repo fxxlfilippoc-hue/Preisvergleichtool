@@ -897,6 +897,7 @@
             <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;">Mein Rabatt</th>
             <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;">Ø Markt</th>
             <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;width:110px;">Niedrigster</th>
+            <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;">Höchster</th>
             <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;width:70px;">Index</th>
             <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;">Zielpreis</th>
             <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;">Rabatt (Ziel)</th>
@@ -2451,14 +2452,19 @@ function stratCalcZielpreis(row, rules) {
   var marke    = row.brand || '';
   var active   = rules.filter(function(r){return r.aktiv;});
   active.sort(function(a,b){return b.prioritaet-a.prioritaet;});
+  // Use niedrigster (Mindestpreis) as base price if available
+  var baseCheapest = (!isNaN(row.niedrigster) && row.niedrigster > 0) ? row.niedrigster : cheapest;
+
   var matched = null;
   for (var i=0;i<active.length;i++){
     var r=active[i];
     var ms = r.season==='alle'||r.season===season;
+    // Case-insensitive partial match on brand
     var mm = r.marke==='alle'||marke.toLowerCase().indexOf(r.marke.toLowerCase())>-1;
     if(ms&&mm){matched=r;break;}
   }
-  if(!matched||isNaN(cheapest)||cheapest<=0) return null;
+  if(!matched||isNaN(baseCheapest)||baseCheapest<=0) return null;
+  cheapest = baseCheapest;
   var minAllowed=(!isNaN(uvp)&&uvp>0)?uvp*(1-matched.max_rabatt_pct/100):0;
   var raw=null;
   switch(matched.strategie){
