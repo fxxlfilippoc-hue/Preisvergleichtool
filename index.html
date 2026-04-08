@@ -2512,10 +2512,14 @@ function stratAddRule() {
 }
 
 function stratDeleteRule(idx) {
-  stratData[stratCurrentSrc].splice(idx, 1);
+  var rules = stratData[stratCurrentSrc];
+  if (!rules || idx < 0 || idx >= rules.length) return;
+  rules.splice(idx, 1);
+  stratData[stratCurrentSrc] = rules;
   stratApplied[stratCurrentSrc] = false;
   stratSave();
   stratRenderTable();
+  stratShowBanner('Regel gelöscht.', 'info');
 }
 
 function stratToggleRule(idx) {
@@ -2594,7 +2598,7 @@ function stratShowBanner(msg, type) {
 function stratCalcZielpreis(row, rules) {
   var myPrice  = row.my_price;
   var cheapest = row.cheapest_price;
-  var uvp      = row.uvp;
+  var uvp      = (!isNaN(row.uvp) && row.uvp > 0) ? row.uvp : (row.hoechster || NaN);
   var season   = ((row.name||'').match(/\b(20\d{2})\b/)||['',''])[1]||'Aktion';
   var marke    = row.brand||'';
   var wg       = row.warengruppe||'';
@@ -2660,9 +2664,14 @@ function stratApply() {
 }
 
 function stratReset() {
+  // Clear calculated zielpreise
   DATA.table.forEach(function(row){row.zielpreis=undefined;});
-  stratApplied[stratCurrentSrc]=false;
-  stratShowBanner('Zielpreise zurückgesetzt.','warning');
+  stratApplied[stratCurrentSrc] = false;
+  // Clear rules for current source
+  stratData[stratCurrentSrc] = [];
+  stratSave();
+  stratRenderTable();
+  stratShowBanner('Regeln und Zielpreise für '+stratSrcLabel(stratCurrentSrc)+' zurückgesetzt.','warning');
   if(document.getElementById('tab-preisanpassungen').classList.contains('active')) renderTable();
 }
 
