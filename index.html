@@ -1793,6 +1793,7 @@ window.addEventListener('load', function() {
     if (sessionStorage.getItem('px_auth')) {
       // Gespeicherte Strategien anzeigen
       stratRenderTable();
+      stratUpdateTableBtn();
     } else {
       document.getElementById('pwOverlay').style.display = 'flex';
     }
@@ -1803,7 +1804,7 @@ window.addEventListener('load', function() {
 var _origCheckPw = checkPw;
 function checkPw() {
   _origCheckPw();
-  setTimeout(function() { stratRenderTable(); }, 100);
+  setTimeout(function() { stratRenderTable(); stratUpdateTableBtn(); }, 100);
 }
 
 // ── Tab Navigation ──
@@ -1965,6 +1966,7 @@ function switchTab(name, btn) {
   document.querySelectorAll('.nav-item').forEach(function(b) { b.classList.remove('active'); });
   document.getElementById('tab-' + name).classList.add('active');
   btn.classList.add('active');
+  if (name === 'preisanpassungen') stratUpdateTableBtn();
 }
 
 renderTable();
