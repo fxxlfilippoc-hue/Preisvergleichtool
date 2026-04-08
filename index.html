@@ -657,6 +657,13 @@
     <span style="color:var(--muted);font-size:12px;font-weight:400;padding-left:8px;border-left:1px solid var(--border);margin-left:4px;">Preisvergleich</span>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
+    <!-- Strategie Bar -->
+    <div id="stratBar" style="display:none;align-items:center;gap:8px;">
+      <div id="stratAppliedBadge" style="font-size:11px;color:var(--green);font-weight:500;white-space:nowrap;"></div>
+      <button id="stratApplyBtn" onclick="stratApplyFromTable()" style="font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;padding:6px 14px;border-radius:var(--radius);border:none;background:var(--accent);color:#fff;cursor:pointer;white-space:nowrap;">
+        ⚡ Strategie anwenden
+      </button>
+    </div>
     <span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;font-weight:500;">Datenquelle</span>
     <div class="source-dropdown-wrap">
       <select class="source-select" id="sourceSelect" onchange="onSourceChange(this.value)">
@@ -854,16 +861,6 @@
 
   <!-- Preisanpassungen Tab -->
   <div id="tab-preisanpassungen" class="tab-panel">
-
-    <!-- Strategie Bar (immer sichtbar) -->
-    <div id="stratBar" style="display:none;background:var(--surface);border-bottom:0.5px solid var(--border);padding:8px 0 10px;margin-bottom:1rem;">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <div id="stratAppliedBadge" style="font-size:11px;color:var(--green);font-weight:500;"></div>
-        <button id="stratApplyBtn" onclick="stratApplyFromTable()" style="font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:7px 16px;border-radius:var(--radius);border:none;background:var(--accent);color:#fff;cursor:pointer;">
-          ⚡ Strategie anwenden
-        </button>
-      </div>
-    </div>
 
     <!-- Normal: Nicht auf Platz 1 (Fahrräder / Zubehör) -->
     <div id="normal-preis-panel">
