@@ -2258,4 +2258,198 @@ function toggleCubePanel(isCube){
   }
 }
 
+
+// ══════════════════════════════════════════
+// PREISSTRATEGIE ENGINE
+// ══════════════════════════════════════════
+
+var stratData = { cube: [], fahrraeder: [], zubehoer: [] };
+var stratCurrentSrc = 'cube';
+var stratApplied = { cube: false, fahrraeder: false, zubehoer: false };
+
+function stratSelectSource(btn, src) {
+  document.querySelectorAll('.strat-src-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  stratCurrentSrc = src;
+  stratRenderTable();
+  stratShowStatus();
+}
+
+function stratSrcLabel(src) {
+  return src === 'cube' ? 'Cube Fahrrad' : src === 'fahrraeder' ? 'Fahrräder' : 'Zubehör';
+}
+
+function stratLoadCSV(file) {
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var rows = parseCSV(e.target.result);
+    if (!rows.length) { stratShowBanner('Keine Daten gefunden.', 'error'); return; }
+    var rules = rows.map(function(r) {
+      return {
+        prioritaet:     parseInt(r['prioritaet'] || r['priorität'] || r['Priorität'] || '1') || 1,
+        season:         (r['season'] || r['Season'] || 'alle').trim(),
+        marke:          (r['marke']  || r['Marke']  || 'alle').trim(),
+        strategie:      (r['strategie'] || r['Strategie'] || '').trim().toLowerCase(),
+        wert:           parseFloat(r['wert'] || r['Wert'] || '0') || 0,
+        max_rabatt_pct: parseFloat(r['max_rabatt_pct'] || '30') || 30,
+        aktiv:          (r['aktiv'] || r['Aktiv'] || 'ja').trim().toLowerCase() !== 'nein'
+      };
+    }).sort(function(a, b) { return b.prioritaet - a.prioritaet; });
+    stratData[stratCurrentSrc] = rules;
+    stratApplied[stratCurrentSrc] = false;
+    stratRenderTable();
+    stratShowBanner(rules.length + ' Regeln für ' + stratSrcLabel(stratCurrentSrc) + ' geladen. Klick auf "Strategie anwenden" um Zielpreise zu berechnen.', 'info');
+  };
+  reader.readAsText(file, 'UTF-8');
+  document.getElementById('stratCsvInput').value = '';
+}
+
+function stratToggleRule(idx) {
+  var rules = stratData[stratCurrentSrc];
+  if (rules[idx]) {
+    rules[idx].aktiv = !rules[idx].aktiv;
+    stratApplied[stratCurrentSrc] = false;
+    stratRenderTable();
+  }
+}
+
+function stratRenderTable() {
+  var rules  = stratData[stratCurrentSrc];
+  var tbody  = document.getElementById('stratTableBody');
+  var cntEl  = document.getElementById('stratRuleCount');
+  if (!tbody) return;
+  if (!rules || !rules.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="padding:2rem;text-align:center;color:var(--muted);font-size:12px;">Noch keine Strategie für ' + stratSrcLabel(stratCurrentSrc) + ' geladen</td></tr>';
+    if (cntEl) cntEl.textContent = '';
+    return;
+  }
+  if (cntEl) cntEl.textContent = rules.length + ' Regeln';
+  var labels = {
+    'markt_minus_x':'Günstigster − x €','markt_minus_pct':'Günstigster − x %',
+    'zielposition':'Zielposition #','uvp_minus_rabatt':'UVP − Rabatt %',
+    'günstigster_plus_x':'Günstigster + x €','günstigster_plus_pct':'Günstigster + x %'
+  };
+  tbody.innerHTML = rules.map(function(r, i) {
+    var prio = r.prioritaet;
+    var prioBg  = prio===1?'#F3F4F6':prio===2?'#FFFBEB':'#EBF3FC';
+    var prioClr = prio===1?'#4B5563':prio===2?'#92400E':'#185FA5';
+    var stratLabel = labels[r.strategie] || r.strategie;
+    var wertStr = r.strategie==='uvp_minus_rabatt'?r.wert+'%':r.strategie==='zielposition'?'Platz '+r.wert:r.strategie.indexOf('pct')>-1?r.wert+'%':r.wert+' €';
+    var scopeStr = (r.season!=='alle'?r.season:'Alle Seasons')+' · '+(r.marke!=='alle'?r.marke:'Alle Marken');
+    var isActive = r.aktiv;
+    return '<tr style="background:#fff;opacity:'+(isActive?'1':'0.45')+';border-bottom:0.5px solid #e8e6e0;">'+
+      '<td style="padding:9px 12px;"><span style="background:'+prioBg+';color:'+prioClr+';font-size:11px;font-weight:700;padding:2px 9px;border-radius:99px;">P'+prio+'</span></td>'+
+      '<td style="padding:9px 12px;font-size:12px;">'+(r.season==='alle'?'<span style="color:#aaa;">alle</span>':'<b>'+r.season+'</b>')+'</td>'+
+      '<td style="padding:9px 12px;font-size:12px;">'+(r.marke==='alle'?'<span style="color:#aaa;">alle</span>':'<b>'+r.marke+'</b>')+'</td>'+
+      '<td style="padding:9px 12px;"><span style="background:var(--surface2);font-size:11px;font-weight:500;padding:3px 9px;border-radius:99px;">'+stratLabel+'</span></td>'+
+      '<td style="padding:9px 12px;font-family:monospace;font-size:12px;font-weight:600;">'+wertStr+'</td>'+
+      '<td style="padding:9px 12px;font-size:12px;color:#888;">'+(r.max_rabatt_pct?r.max_rabatt_pct+'%':'—')+'</td>'+
+      '<td style="padding:9px 12px;text-align:center;">'+
+        (function(ri,ra){var btn=document.createElement('button');btn.style.cssText='font-family:sans-serif;font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px;cursor:pointer;border:0.5px solid;background:'+(ra?'var(--green-soft);color:var(--green);border-color:var(--green)':'var(--surface2);color:var(--muted);border-color:var(--border)');btn.textContent=ra?'Aktiv':'Inaktiv';btn.onclick=function(){stratToggleRule(ri);};return '<td style="padding:9px 12px;text-align:center;">'+btn.outerHTML+'</td>';})(i,isActive)+
+
+      '<td style="padding:9px 12px;font-size:11px;color:#888;">'+scopeStr+'</td>'+
+      '</tr>';
+  }).join('');
+}
+
+function stratShowStatus() {
+  var rules = stratData[stratCurrentSrc];
+  if (!rules || !rules.length) { stratShowBanner('', ''); return; }
+  if (stratApplied[stratCurrentSrc]) {
+    stratShowBanner('✓ Strategie für '+stratSrcLabel(stratCurrentSrc)+' ist aktiv und angewendet.','success');
+  } else {
+    stratShowBanner('Strategie geladen aber noch nicht angewendet — klick auf "Strategie anwenden".','warning');
+  }
+}
+
+function stratShowBanner(msg, type) {
+  var el = document.getElementById('stratStatusBanner');
+  if (!el) return;
+  if (!msg) { el.style.display='none'; return; }
+  var styles = {
+    info:    'background:var(--blue-soft);color:var(--blue);border:0.5px solid rgba(24,95,165,0.2);',
+    success: 'background:var(--green-soft);color:var(--green);border:0.5px solid rgba(29,158,117,0.2);',
+    warning: 'background:var(--amber-soft);color:var(--amber);border:0.5px solid rgba(186,117,23,0.2);',
+    error:   'background:var(--accent-soft);color:var(--accent);border:0.5px solid rgba(230,59,43,0.2);'
+  };
+  el.style.cssText = 'display:block;margin-bottom:1rem;padding:10px 14px;border-radius:var(--radius);font-size:12px;font-weight:500;'+(styles[type]||styles.info);
+  el.textContent = msg;
+}
+
+function stratCalcZielpreis(row, rules) {
+  var myPrice  = row.my_price;
+  var cheapest = row.cheapest_price;
+  var uvp      = row.uvp;
+  var season   = ((row.name||'').match(/\b(20\d{2})\b/)||['',''])[1] || 'Aktion';
+  var marke    = row.brand || '';
+  var active   = rules.filter(function(r){return r.aktiv;});
+  active.sort(function(a,b){return b.prioritaet-a.prioritaet;});
+  var matched = null;
+  for (var i=0;i<active.length;i++){
+    var r=active[i];
+    var ms = r.season==='alle'||r.season===season;
+    var mm = r.marke==='alle'||marke.toLowerCase().indexOf(r.marke.toLowerCase())>-1;
+    if(ms&&mm){matched=r;break;}
+  }
+  if(!matched||isNaN(cheapest)||cheapest<=0) return null;
+  var minAllowed=(!isNaN(uvp)&&uvp>0)?uvp*(1-matched.max_rabatt_pct/100):0;
+  var raw=null;
+  switch(matched.strategie){
+    case 'markt_minus_x':        raw=cheapest-matched.wert; break;
+    case 'markt_minus_pct':      raw=cheapest*(1-matched.wert/100); break;
+    case 'uvp_minus_rabatt':     if(!isNaN(uvp)&&uvp>0) raw=uvp*(1-matched.wert/100); break;
+    case 'günstigster_plus_x':   raw=cheapest+matched.wert; break;
+    case 'günstigster_plus_pct': raw=cheapest*(1+matched.wert/100); break;
+    case 'zielposition':         raw=cheapest-(matched.wert>1?0:10); break;
+    default: return null;
+  }
+  if(raw===null||isNaN(raw)) return null;
+  raw=Math.floor(raw)+0.99;
+  if(raw<minAllowed) raw=Math.floor(minAllowed)+0.99;
+  if(!isNaN(uvp)&&uvp>0&&raw>uvp) raw=uvp;
+  return Math.round(raw*100)/100;
+}
+
+function stratApply() {
+  var rules=stratData[stratCurrentSrc];
+  if(!rules||!rules.length){stratShowBanner('Bitte zuerst eine CSV hochladen.','error');return;}
+  var srcDropdown=document.getElementById('sourceSelect');
+  var activeSrc=srcDropdown?srcDropdown.value:'';
+  if(activeSrc!==stratCurrentSrc){
+    stratApplied[stratCurrentSrc]=true;
+    stratShowBanner('Strategie für '+stratSrcLabel(stratCurrentSrc)+' gespeichert. Wechsle zur Datenquelle um Zielpreise zu sehen.','warning');
+    return;
+  }
+  var count=0;
+  DATA.table.forEach(function(row){
+    var z=stratCalcZielpreis(row,rules);
+    row.zielpreis=z;
+    if(z!==null) count++;
+  });
+  stratApplied[stratCurrentSrc]=true;
+  stratShowBanner('✓ Zielpreise berechnet für '+count+' von '+DATA.table.length+' Artikeln.','success');
+  if(document.getElementById('tab-preisanpassungen').classList.contains('active')) renderTable();
+}
+
+function stratReset() {
+  DATA.table.forEach(function(row){row.zielpreis=undefined;});
+  stratApplied[stratCurrentSrc]=false;
+  stratShowBanner('Strategie für '+stratSrcLabel(stratCurrentSrc)+' zurückgesetzt.','warning');
+  if(document.getElementById('tab-preisanpassungen').classList.contains('active')) renderTable();
+}
+
+function stratDownloadTemplate() {
+  var csv='prioritaet;season;marke;strategie;wert;max_rabatt_pct;aktiv\n'+
+    '1;alle;alle;uvp_minus_rabatt;30;30;ja\n'+
+    '2;2026;alle;markt_minus_x;10;30;ja\n'+
+    '3;2026;Cube;markt_minus_pct;5;25;ja\n'+
+    '2;alle;Cube;günstigster_plus_x;5;30;nein\n'+
+    '3;Aktion;alle;markt_minus_pct;15;40;ja';
+  var a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
+  a.download='preisstrategie_vorlage.csv';
+  a.click();
+}
+
 </script>
