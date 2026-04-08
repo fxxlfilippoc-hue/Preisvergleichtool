@@ -1028,6 +1028,7 @@
       </div>
       </div>
 
+      <div id="cubeExtraPanel" style="display:none;">
       <!-- Preisstrategie (direkt über Tabelle) -->
       <div id="cubeStratBlock" class="cube-filters" style="margin-top:0.5rem;background:var(--blue-soft);border-color:rgba(24,95,165,0.2);">
         <div id="cubeStratActive" style="display:none;width:100%;">
@@ -1081,6 +1082,7 @@
           <div class="page-btns" id="cubePageBtns"></div>
         </div>
       </div>
+      </div><!-- end cubeExtraPanel -->
     </div><!-- end cube-panel -->
 
   </div> <!-- end tab-preisanpassungen -->
@@ -2512,14 +2514,17 @@ function cubeDownloadCSV(){
 
 // ── Toggle: Preisanpassungen zeigt Cube oder Normal ──
 function toggleCubePanel(isCube){
-  var normalPreis = document.getElementById('normal-preis-panel');
-  var cubePanel   = document.getElementById('cube-panel');
+  var normalPreis  = document.getElementById('normal-preis-panel');
+  var cubePanel    = document.getElementById('cube-panel');
+  var cubeExtra    = document.getElementById('cubeExtraPanel');
   if(isCube){
     if(normalPreis) normalPreis.style.display = 'none';
     if(cubePanel)   cubePanel.style.display   = 'block';
+    if(cubeExtra)   cubeExtra.style.display   = 'block';
   } else {
     if(normalPreis) normalPreis.style.display = 'block';
     if(cubePanel)   cubePanel.style.display   = 'none';
+    if(cubeExtra)   cubeExtra.style.display   = 'none';
   }
 }
 
