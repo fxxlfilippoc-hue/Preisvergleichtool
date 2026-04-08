@@ -1374,7 +1374,7 @@ function updateDashboard(rows) {
     else pos4plus++;
 
     if (pos > 1 && !isNaN(cheapPrice)) {
-      var uvp        = parseNum(r['UVP']);
+      var uvp        = parseNum(r['UVP']) || parseNum(r['Standardpreis']);
       var median     = parseNum(r['Medianpreis']);
       var numShops   = parseInt(r['Preise']) || 0;
       var minPreis   = parseNum(r['Mindestpreis']);
@@ -1580,27 +1580,31 @@ function renderTable() {
   tbody.innerHTML = rows.map(function(r) {
     var td   = 'padding:7px 12px;vertical-align:middle;border-bottom:0.5px solid #e8e6e0;font-size:13px;color:#1A1A18;';
     var mono = td + 'font-family:monospace;';
-    var diffColor = r.diff > 0 ? '#c0392b' : r.diff < 0 ? '#1a7a3f' : '#888';
-    var diffSign  = r.diff > 0 ? '+' : '';
-    var seasonMatch = (r.name || '').match(/\b(20\d{2})\b/);
+    var seasonMatch = (r.name||'').match(/\b(20\d{2})\b/);
     var season = seasonMatch ? seasonMatch[1] : (/aktion/i.test(r.name||'') ? 'Aktion' : '');
-    // Index: Mein Preis vs. Niedrigster
-    var niedrig = !isNaN(r.niedrigster) ? r.niedrigster : r.cheapest_price;
-    var idx = (!isNaN(r.my_price) && !isNaN(niedrig) && niedrig > 0)
-      ? r.my_price / niedrig * 100 : null;
-    var idxColor = idx===null ? '#888' : idx>105 ? '#c0392b' : idx<97 ? '#1a7a3f' : '#1A1A18';
-    var posBg    = r.position===2 ? '#FFFBEB' : r.position===3 ? '#FDEAEA' : '#F3F4F6';
-    var posClr   = r.position===2 ? '#92400E' : r.position===3 ? '#B91C1C' : '#4B5563';
-    var rabStr   = !isNaN(r.my_rabatt) ? '-' + r.my_rabatt.toFixed(1) + '%' : '-0,0%';
-    var uvpStr   = !isNaN(r.uvp) && r.uvp > 0 ? r.uvp.toFixed(2) + ' €' : '—';
-    var shopsStr = r.num_shops > 0 ? r.num_shops + ' Shops' : '—';
-    var zielpreisStr = (r.zielpreis !== undefined && r.zielpreis !== null) ? r.zielpreis.toFixed(2) + ' €' : '—';
-    var zielpreisClr = (r.zielpreis !== undefined && r.zielpreis !== null) ? (r.zielpreis < r.my_price ? '#1a7a3f' : r.zielpreis > r.my_price ? '#c0392b' : '#1A1A18') : '#ccc';
-    var rabattZielStr = (r.zielpreis !== undefined && r.zielpreis !== null && !isNaN(r.uvp) && r.uvp > 0) ? '-' + ((r.uvp - r.zielpreis) / r.uvp * 100).toFixed(1) + '%' : '—';
-    var potenzialStr  = (r.zielpreis !== undefined && r.zielpreis !== null) ? ((r.zielpreis - r.my_price) >= 0 ? '+' : '') + (r.zielpreis - r.my_price).toFixed(2) + ' €' : '—';
-    var potenzialClr  = (r.zielpreis !== undefined && r.zielpreis !== null) ? ((r.zielpreis - r.my_price) < 0 ? '#c0392b' : '#1a7a3f') : '#ccc';
-    var niedrigStr = !isNaN(niedrig) ? niedrig.toFixed(2) + ' €' : '—';
-    var hoechStr   = !isNaN(r.hoechster) ? r.hoechster.toFixed(2) + ' €' : '—';
+    var niedrig   = !isNaN(r.niedrigster) && r.niedrigster > 0 ? r.niedrigster : r.cheapest_price;
+    var idx       = (!isNaN(r.my_price) && !isNaN(niedrig) && niedrig > 0) ? r.my_price / niedrig * 100 : null;
+    var idxColor  = idx===null ? '#888' : idx>105 ? '#c0392b' : idx<97 ? '#1a7a3f' : '#1A1A18';
+    var posBg     = r.position===2 ? '#FFFBEB' : r.position===3 ? '#FDEAEA' : '#F3F4F6';
+    var posClr    = r.position===2 ? '#92400E' : r.position===3 ? '#B91C1C' : '#4B5563';
+    // Mein Rabatt = (UVP - Mein Preis) / UVP
+    var myRab     = (!isNaN(r.uvp) && r.uvp > 0 && !isNaN(r.my_price)) ? (r.uvp - r.my_price) / r.uvp * 100 : null;
+    var rabStr    = myRab !== null ? '-' + myRab.toFixed(1) + '%' : '-0,0%';
+    var uvpStr    = !isNaN(r.uvp) && r.uvp > 0 ? r.uvp.toFixed(2) + ' €' : '—';
+    var niedrigStr= !isNaN(niedrig) ? niedrig.toFixed(2) + ' €' : '—';
+    var hoechStr  = !isNaN(r.hoechster) ? r.hoechster.toFixed(2) + ' €' : '—';
+    // Zielpreis
+    var hasZiel   = r.zielpreis !== undefined && r.zielpreis !== null;
+    var zielStr   = hasZiel ? r.zielpreis.toFixed(2) + ' €' : '—';
+    var zielClr   = hasZiel ? (r.zielpreis < r.my_price ? '#1a7a3f' : r.zielpreis > r.my_price ? '#c0392b' : '#1A1A18') : '#ccc';
+    // Rabatt (Ziel) = (UVP - Zielpreis) / UVP
+    var rabZielStr= (hasZiel && !isNaN(r.uvp) && r.uvp > 0) ? '-' + ((r.uvp - r.zielpreis) / r.uvp * 100).toFixed(1) + '%' : '—';
+    // Potenzial = Zielpreis - Mein Preis
+    var pot       = hasZiel ? r.zielpreis - r.my_price : null;
+    var potStr    = pot !== null ? (pot >= 0 ? '+' : '') + pot.toFixed(2) + ' €' : '—';
+    var potClr    = pot === null ? '#ccc' : pot < 0 ? '#c0392b' : '#1a7a3f';
+    // Shops
+    var shopsStr  = r.num_shops > 0 ? r.num_shops + ' Shops' : (r.cheapest_provider ? '1 Shop' : '—');
     return '<tr style="background:#fff;">' +
       '<td style="'+td+'max-width:200px;">' +
         '<div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+r.name+'">'+r.name+'</div>' +
@@ -1618,9 +1622,10 @@ function renderTable() {
       '</td>' +
       '<td style="'+mono+'color:#888;">'+hoechStr+'</td>' +
       '<td style="'+mono+'font-weight:700;color:'+idxColor+';">'+(idx!==null?idx.toFixed(1)+'%':'—')+'</td>' +
-      '<td style="'+mono+'font-weight:600;color:'+zielpreisClr+';">'+zielpreisStr+'</td>' +
-      '<td style="'+mono+'color:#888;">'+rabattZielStr+'</td>' +
-      '<td style="'+mono+'font-weight:600;color:'+potenzialClr+';">'+potenzialStr+'</td>' +
+      '<td style="'+mono+'font-weight:600;color:'+zielClr+';">'+zielStr+'</td>' +
+      '<td style="'+mono+'color:#888;">'+rabZielStr+'</td>' +
+      '<td style="'+mono+'font-weight:600;color:'+potClr+';">'+potStr+'</td>' +
+      '<td style="'+td+'color:#ccc;">—</td>' +
       '<td style="'+td+'color:#ccc;">—</td>' +
       '<td style="'+mono+'color:#888;">'+uvpStr+'</td>' +
       '<td style="'+td+'">' +
@@ -1743,12 +1748,20 @@ window.addEventListener('load', function() {
   setTimeout(function() {
     document.getElementById('loadingOverlay').style.display = 'none';
     if (sessionStorage.getItem('px_auth')) {
-      // kein Produktdaten-Laden
+      // Gespeicherte Strategien anzeigen
+      stratRenderTable();
     } else {
       document.getElementById('pwOverlay').style.display = 'flex';
     }
   }, 1200);
 });
+
+// Nach Passwort-Login auch Strategien rendern
+var _origCheckPw = checkPw;
+function checkPw() {
+  _origCheckPw();
+  setTimeout(function() { stratRenderTable(); }, 100);
+}
 
 // ── Tab Navigation ──
 
@@ -2391,6 +2404,25 @@ function toggleCubePanel(isCube){
 var stratData = { cube: [], fahrraeder: [], zubehoer: [] };
 var stratCurrentSrc = 'cube';
 var stratApplied = { cube: false, fahrraeder: false, zubehoer: false };
+
+// ── Strategien aus localStorage laden ──
+(function() {
+  try {
+    var saved = localStorage.getItem('fxxl_stratData');
+    if (saved) {
+      var parsed = JSON.parse(saved);
+      if (parsed.cube)       stratData.cube       = parsed.cube;
+      if (parsed.fahrraeder) stratData.fahrraeder = parsed.fahrraeder;
+      if (parsed.zubehoer)   stratData.zubehoer   = parsed.zubehoer;
+    }
+  } catch(e) { console.warn('Strategie-Daten konnten nicht geladen werden:', e); }
+})();
+
+function stratSave() {
+  try {
+    localStorage.setItem('fxxl_stratData', JSON.stringify(stratData));
+  } catch(e) { console.warn('Speichern fehlgeschlagen:', e); }
+}
 var stratCurrentPrio = 1;
 var stratCurrentType = 'markt_minus_x';
 
@@ -2473,6 +2505,7 @@ function stratAddRule() {
   stratData[stratCurrentSrc].push(rule);
   stratData[stratCurrentSrc].sort(function(a,b){ return b.prioritaet-a.prioritaet; });
   stratApplied[stratCurrentSrc] = false;
+  stratSave();
   stratRenderTable();
   stratShowBanner('Regel hinzugefügt — klick auf "Strategie anwenden" um Zielpreise zu berechnen.', 'info');
 }
@@ -2480,12 +2513,13 @@ function stratAddRule() {
 function stratDeleteRule(idx) {
   stratData[stratCurrentSrc].splice(idx, 1);
   stratApplied[stratCurrentSrc] = false;
+  stratSave();
   stratRenderTable();
 }
 
 function stratToggleRule(idx) {
   var rules = stratData[stratCurrentSrc];
-  if (rules[idx]) { rules[idx].aktiv = !rules[idx].aktiv; stratApplied[stratCurrentSrc]=false; stratRenderTable(); }
+  if (rules[idx]) { rules[idx].aktiv = !rules[idx].aktiv; stratApplied[stratCurrentSrc]=false; stratSave(); stratRenderTable(); }
 }
 
 function stratRenderTable() {
@@ -2653,6 +2687,7 @@ function stratLoadCSV(file) {
     }).sort(function(a,b){return b.prioritaet-a.prioritaet;});
     stratData[stratCurrentSrc]=rules;
     stratApplied[stratCurrentSrc]=false;
+    stratSave();
     stratRenderTable();
     stratShowBanner(rules.length+' Regeln geladen.','info');
   };
