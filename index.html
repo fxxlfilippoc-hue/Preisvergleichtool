@@ -886,6 +886,12 @@
         <div class="filter-actions">
           <button class="pill" onclick="normalClearFilters()" style="height:32px;">Zurücksetzen</button>
         </div>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+          <div id="stratAppliedBadge" style="display:none;font-size:11px;color:var(--green);font-weight:500;"></div>
+          <button id="stratApplyBtn" onclick="stratApplyFromTable()" style="font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:7px 16px;border-radius:var(--radius);border:none;background:var(--accent);color:#fff;cursor:pointer;display:none;">
+            ⚡ Strategie anwenden
+          </button>
+        </div>
       </div>
 
       <!-- KPI Row (alle Quellen) -->
@@ -1150,12 +1156,12 @@
             style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;width:80px;">
         </div>
         <div class="fg" id="minPctField" style="display:none;">
-          <label>Min Preis (% Rabatt UVP)</label>
+          <label>Min Preis = niedrigster Zielpreis (% Rabatt UVP)</label>
           <input id="newMinPct" type="number" value="20" min="0" max="80" step="1"
             style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;width:80px;">
         </div>
         <div class="fg" id="maxPctField" style="display:none;">
-          <label>Max Preis (% Rabatt UVP)</label>
+          <label>Max Preis = höchster Zielpreis (% Rabatt UVP)</label>
           <input id="newMaxPct" type="number" value="35" min="0" max="80" step="1"
             style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;width:80px;">
         </div>
@@ -1226,7 +1232,7 @@
       <b style="color:var(--text);">Günstigster + x €/% </b>→ Zielpreis liegt knapp über dem günstigsten Konkurrenten. Maximiert Marge bei guter Position.<br>
       <b style="color:var(--text);">UVP − Rabatt % </b>→ Fixer Rabatt auf die UVP unabhängig vom Markt. Gut als Catchall-Regel (P1).<br>
       <b style="color:var(--text);">Zielposition </b>→ Strebt Platz 1 (−10 €) oder Platz 2+ (gleicher Preis) an.<br>
-      <b style="color:var(--text);">Min / Max % </b>→ Definiert einen Preiskorridor als % Rabatt auf UVP. Der Zielpreis folgt dem Markt — aber nie unter Min und nie über Max. Ideal für saisonale Budgetgrenzen.
+      <b style="color:var(--text);">Min / Max % </b>→ Definiert einen Preiskorridor. <b>Min Preis</b> = niedrigster Zielpreis (z.B. 30% Rabatt = UVP×0,70). <b>Max Preis</b> = höchster Zielpreis (z.B. 20% Rabatt = UVP×0,80). Der Zielpreis folgt dem Markt innerhalb dieses Korridors.
     </div>
 
   </div>
@@ -1283,6 +1289,20 @@ function onSourceChange(source) {
       showToast(label + ': ' + parsed.length.toLocaleString('de-DE') + ' Artikel geladen');
       toggleCubePanel(source === 'cube');
       if(source === 'cube') cubeBuildDashboard(parsed);
+      stratUpdateTableBtn();
+      // Auto-apply strategy if rules exist for this source
+      var rules = stratData[source] || [];
+      if (rules.length > 0) {
+        var count = 0;
+        DATA.table.forEach(function(row) {
+          var z = stratCalcZielpreis(row, rules);
+          row.zielpreis = z;
+          if (z !== null) count++;
+        });
+        stratApplied[source] = true;
+        var badge = document.getElementById('stratAppliedBadge');
+        if (badge && count > 0) { badge.style.display='block'; badge.textContent='✓ '+count+' Zielpreise berechnet'; }
+      }
     })
     .catch(function(err) {
       showToast('Fehler beim Laden: ' + err.message, true);
@@ -1857,6 +1877,46 @@ function renderNormalKPIs(rows) {
   });
 }
 
+function stratApplyFromTable() {
+  var src = document.getElementById('sourceSelect') ? document.getElementById('sourceSelect').value : '';
+  var rules = stratData[src] || [];
+  if (!rules.length) {
+    showToast('Keine Regeln für diese Datenquelle — bitte zuerst in Einstellungen hinterlegen.', true);
+    return;
+  }
+  var count = 0;
+  DATA.table.forEach(function(row) {
+    var z = stratCalcZielpreis(row, rules);
+    row.zielpreis = z;
+    if (z !== null) count++;
+  });
+  stratApplied[src] = true;
+  renderTable();
+  var badge = document.getElementById('stratAppliedBadge');
+  if (badge) {
+    badge.style.display = 'block';
+    badge.textContent = '✓ ' + count + ' Zielpreise berechnet';
+  }
+  showToast('✓ Strategie angewendet: ' + count + ' Zielpreise berechnet', false);
+}
+
+function stratUpdateTableBtn() {
+  var src = document.getElementById('sourceSelect') ? document.getElementById('sourceSelect').value : '';
+  var rules = stratData[src] || [];
+  var btn = document.getElementById('stratApplyBtn');
+  var badge = document.getElementById('stratAppliedBadge');
+  if (!btn) return;
+  if (rules.length > 0) {
+    btn.style.display = 'block';
+    btn.textContent = '⚡ Strategie anwenden (' + rules.length + ' Regel' + (rules.length > 1 ? 'n' : '') + ')';
+  } else {
+    btn.style.display = 'none';
+  }
+  if (badge && !stratApplied[src]) {
+    badge.style.display = 'none';
+  }
+}
+
 function switchTab(name, btn) {
   document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
   document.querySelectorAll('.nav-item').forEach(function(b) { b.classList.remove('active'); });
@@ -2429,7 +2489,7 @@ var stratHints = {
   günstigster_plus_pct:'Zielpreis = Günstigster × (1 + x/100) — nie über UVP',
   uvp_minus_rabatt:    'Zielpreis = UVP × (1 − x/100) — gut als Catchall-Regel P1',
   zielposition:        'Platz 1 → Günstigster − 10 €  |  Platz 2+ → gleicher Preis wie Günstigster',
-  min_max:             'Zielpreis folgt dem Marktpreis — aber nie unter UVP×(1−Max%) und nie über UVP×(1−Min%)'
+  min_max:             'Min = niedrigster erlaubter Zielpreis (z.B. 30% Rabatt = UVP×0,70). Max = höchster erlaubter Zielpreis (z.B. 20% Rabatt = UVP×0,80). Zielpreis folgt dem Markt innerhalb dieses Korridors.'
 };
 var stratWertLabels = {
   markt_minus_x:'Wert (€)', markt_minus_pct:'Wert (%)',
@@ -2611,10 +2671,12 @@ function stratCalcZielpreis(row, rules) {
   if(!matched) return null;
 
   // min_max strategy
+  // min_pct = Min Preis = niedrigster Zielpreis (größerer Rabatt)
+  // max_pct = Max Preis = höchster Zielpreis (kleinerer Rabatt)
   if(matched.strategie==='min_max'){
     if(isNaN(uvp)||uvp<=0) return null;
-    var minPrice = uvp*(1-matched.max_pct/100);  // max_pct = bigger discount = lower price
-    var maxPrice = uvp*(1-matched.min_pct/100);  // min_pct = smaller discount = higher price
+    var minPrice = uvp*(1-matched.min_pct/100);  // Min Preis = niedrigster erlaubter Preis
+    var maxPrice = uvp*(1-matched.max_pct/100);  // Max Preis = höchster erlaubter Preis
     if(isNaN(baseCheapest)||baseCheapest<=0) return Math.floor(maxPrice)+0.99;
     var target = baseCheapest - 10;
     target = Math.max(target, minPrice);
