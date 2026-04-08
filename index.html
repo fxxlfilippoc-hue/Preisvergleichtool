@@ -1800,6 +1800,7 @@ function checkPw() {
   if (val === PW) {
     sessionStorage.setItem('px_auth', '1');
     document.getElementById('pwOverlay').style.display = 'none';
+    setTimeout(function() { stratRenderTable(); stratUpdateTableBtn(); }, 100);
   } else {
     var inp = document.getElementById('pwInput');
     var err = document.getElementById('pwError');
@@ -1831,12 +1832,7 @@ window.addEventListener('load', function() {
   }, 1200);
 });
 
-// Nach Passwort-Login auch Strategien rendern
-var _origCheckPw = checkPw;
-function checkPw() {
-  _origCheckPw();
-  setTimeout(function() { stratRenderTable(); stratUpdateTableBtn(); }, 100);
-}
+
 
 // ── Tab Navigation ──
 
