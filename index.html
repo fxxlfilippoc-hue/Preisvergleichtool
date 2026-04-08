@@ -1374,7 +1374,8 @@ function updateDashboard(rows) {
     else pos4plus++;
 
     if (pos > 1 && !isNaN(cheapPrice)) {
-      var uvp        = parseNum(r['UVP']) || parseNum(r['Standardpreis']);
+      var _uvpRaw = parseNum(r['UVP']);
+      var uvp = (!isNaN(_uvpRaw) && _uvpRaw > 0) ? _uvpRaw : parseNum(r['Standardpreis']);
       var median     = parseNum(r['Medianpreis']);
       var numShops   = parseInt(r['Preise']) || 0;
       var minPreis   = parseNum(r['Mindestpreis']);
