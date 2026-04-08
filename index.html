@@ -2917,15 +2917,55 @@ function downloadNormalExcel() {
 
 function downloadCubeExcel() {
   if (!filteredClusters || !filteredClusters.length) { showToast('Keine Daten zum Exportieren.', true); return; }
-  var rows = [['Produktname','Modellnummern','Season','Mein Preis','Mein Rabatt','Ø Markt','Niedrigster','Günstigster Shop','Höchster','Preisindex','Zielpreis','Rabatt (Ziel)','Potenzial','Status','Empfehlung','UVP','Shops']];
+
+  // Build a lookup: SKU → cluster data
+  var clusterBySku = {};
   filteredClusters.forEach(function(c) {
-    var myRab = (c.myPrice && c.uvp) ? +((c.uvp-c.myPrice)/c.uvp*100).toFixed(1) : '';
-    var rabZiel = (c.targetPrice && c.uvp) ? +((c.uvp-c.targetPrice)/c.uvp*100).toFixed(1) : '';
-    var pot = (c.targetPrice && c.myPrice) ? +(c.targetPrice-c.myPrice).toFixed(2) : '';
-    var idx = c.priceIndex ? +c.priceIndex.toFixed(1) : '';
-    rows.push([c.name||'', c.modellnummern?c.modellnummern.join(', '):'', c.season||'', c.myPrice||'', myRab, c.avgMarket?+c.avgMarket.toFixed(2):'', c.minPrice||'', c.cheapestShop||'', c.maxPrice||'', idx, c.targetPrice||'', rabZiel, pot, c.status||'', c.action||'', c.uvp||'', c.shops?c.shops.length:'']);
+    c.skus.forEach(function(sku) { clusterBySku[sku] = c; });
   });
-  excelExport(rows, 'cube_preisanalyse.xlsx');
+
+  // Use allClusters SKU list to expand per Artikelnummer
+  // Each cluster may have multiple SKUs - export one row per SKU
+  var rows = [['SKU (Artikelnummer)','Produktname','Modellnummer','Season','Mein Preis','Mein Rabatt %','Ø Markt','Niedrigster','Günstigster Shop','Höchster','Preisindex %','Zielpreis','Rabatt (Ziel) %','Potenzial','Status','Empfehlung','UVP','Anzahl Shops']];
+
+  filteredClusters.forEach(function(c) {
+    var myRab    = (c.myPrice && c.uvp) ? +((c.uvp-c.myPrice)/c.uvp*100).toFixed(1) : '';
+    var rabZiel  = (c.targetPrice && c.uvp) ? +((c.uvp-c.targetPrice)/c.uvp*100).toFixed(1) : '';
+    var pot      = (c.targetPrice && c.myPrice) ? +(c.targetPrice-c.myPrice).toFixed(2) : '';
+    var idx      = c.priceIndex ? +c.priceIndex.toFixed(1) : '';
+    var statusDE = {kritisch:'Kritisch', marge:'Marge verschenkt', optimal:'Optimal', nc:'Nicht wettbewerbsfähig'};
+    var actionDE = {reduce:'Senken', raise:'Erhöhen', keep:'Lassen'};
+
+    if (c.skus && c.skus.length > 0) {
+      c.skus.forEach(function(sku, i) {
+        var moNr = c.modellnummern && c.modellnummern[i] ? c.modellnummern[i] : (c.modellnummern && c.modellnummern[0] ? c.modellnummern[0] : '');
+        rows.push([
+          sku, c.name||'', moNr, c.season||'',
+          c.myPrice||'', myRab,
+          c.avgMarket ? +c.avgMarket.toFixed(2) : '',
+          c.minPrice||'', c.cheapestShop||'', c.maxPrice||'',
+          idx, c.targetPrice||'', rabZiel, pot,
+          statusDE[c.status]||c.status||'',
+          actionDE[c.action]||c.action||'',
+          c.uvp||'', c.shops ? c.shops.length : ''
+        ]);
+      });
+    } else {
+      // Cluster without SKUs
+      rows.push([
+        '', c.name||'', '', c.season||'',
+        c.myPrice||'', myRab,
+        c.avgMarket ? +c.avgMarket.toFixed(2) : '',
+        c.minPrice||'', c.cheapestShop||'', c.maxPrice||'',
+        idx, c.targetPrice||'', rabZiel, pot,
+        statusDE[c.status]||c.status||'',
+        actionDE[c.action]||c.action||'',
+        c.uvp||'', c.shops ? c.shops.length : ''
+      ]);
+    }
+  });
+
+  excelExport(rows, 'cube_preisanalyse_per_sku.xlsx');
 }
 
 function excelExport(rows, filename) {
