@@ -423,6 +423,9 @@
   }
   .strat-src-btn:hover { background: var(--surface2); color: var(--text); }
   .strat-src-btn.active { background: var(--text); color: #fff; border-color: var(--text); }
+  .settings-nav-btn:hover { color: var(--text) !important; }
+  .settings-nav-btn.active { color: var(--text) !important; border-bottom-color: var(--accent) !important; }
+  .settings-panel { display: block; }
   .prio-btn {
     font-family: 'DM Sans', sans-serif;
     padding: 10px 20px; border-radius: var(--radius);
@@ -1056,9 +1059,20 @@
   <div id="tab-einstellungen" class="tab-panel">
   <div class="page" style="padding-top:1.5rem;">
 
-    <p class="section-title">Preisstrategien</p>
+    <!-- Einstellungen Navigation -->
+    <div style="display:flex;gap:0;margin-bottom:1.5rem;border-bottom:0.5px solid var(--border);">
+      <button class="settings-nav-btn active" data-settings="preisstrategien" onclick="settingsNav(this,'preisstrategien')" style="font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;padding:10px 20px;border:none;background:none;cursor:pointer;color:var(--text);border-bottom:2px solid var(--accent);margin-bottom:-1px;">
+        Preisstrategien
+      </button>
+      <button class="settings-nav-btn" data-settings="placeholder" onclick="settingsNav(this,'placeholder')" style="font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;padding:10px 20px;border:none;background:none;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;">
+        Weitere Einstellungen
+      </button>
+    </div>
 
-    <!-- Datenquelle Auswahl -->
+    <!-- Panel: Preisstrategien -->
+    <div id="settings-preisstrategien" class="settings-panel">
+      <p class="section-title">Preisstrategien</p>
+      <!-- Datenquelle Auswahl -->
     <div style="display:flex;gap:8px;margin-bottom:1.5rem;">
       <button class="strat-src-btn active" data-src="cube" onclick="stratSelectSource(this,'cube')">Cube Fahrrad</button>
       <button class="strat-src-btn" data-src="fahrraeder" onclick="stratSelectSource(this,'fahrraeder')">Fahrräder</button>
@@ -1233,6 +1247,15 @@
       <b style="color:var(--text);">UVP − Rabatt % </b>→ Fixer Rabatt auf die UVP unabhängig vom Markt. Gut als Catchall-Regel (P1).<br>
       <b style="color:var(--text);">Zielposition </b>→ Strebt Platz 1 (−10 €) oder Platz 2+ (gleicher Preis) an.<br>
       <b style="color:var(--text);">Min / Max % </b>→ Definiert einen Preiskorridor. <b>Min Preis</b> = niedrigster Zielpreis (z.B. 30% Rabatt = UVP×0,70). <b>Max Preis</b> = höchster Zielpreis (z.B. 20% Rabatt = UVP×0,80). Der Zielpreis folgt dem Markt innerhalb dieses Korridors.
+    </div>
+    </div>
+
+    <!-- Panel: Placeholder -->
+    <div id="settings-placeholder" class="settings-panel" style="display:none;">
+      <p class="section-title">Weitere Einstellungen</p>
+      <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:2rem;text-align:center;color:var(--muted);font-size:13px;">
+        Weitere Einstellungen folgen in Kürze.
+      </div>
     </div>
 
   </div>
@@ -1875,6 +1898,22 @@ function renderNormalKPIs(rows) {
     }
     el.appendChild(div);
   });
+}
+
+function settingsNav(btn, panel) {
+  document.querySelectorAll('.settings-nav-btn').forEach(function(b) {
+    b.classList.remove('active');
+    b.style.color = 'var(--muted)';
+    b.style.borderBottomColor = 'transparent';
+  });
+  btn.classList.add('active');
+  btn.style.color = 'var(--text)';
+  btn.style.borderBottomColor = 'var(--accent)';
+  document.querySelectorAll('.settings-panel').forEach(function(p) {
+    p.style.display = 'none';
+  });
+  var target = document.getElementById('settings-' + panel);
+  if (target) target.style.display = 'block';
 }
 
 function stratApplyFromTable() {
