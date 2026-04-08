@@ -626,6 +626,7 @@
     60%      { transform: translateX(6px); }
   }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -1034,7 +1035,13 @@
           <div style="font-size:11px;color:var(--muted);margin-top:2px;">Gehe zu Einstellungen → Preisstrategien → Cube Fahrrad um Regeln zu bearbeiten.</div>
         </div>
         <div id="cubeStratManual" style="width:100%;">
-          <span style="font-size:11px;font-weight:600;color:var(--blue);width:100%;margin-bottom:2px;display:block;">🎯 Preisstrategie — wähle oben eine Season aus damit die Strategie greift</span>
+          <div style="width:100%;margin-bottom:10px;">
+            <div style="font-size:11px;font-weight:600;color:var(--blue);margin-bottom:3px;">🎯 Manuelle Preisstrategie</div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.6;">
+              Keine automatischen Regeln aktiv. Wähle eine <b style="color:var(--text);">Season</b> und einen <b style="color:var(--text);">Max. Rabatt</b> — der Zielpreis wird dann als <i>Günstigster Marktpreis − 10 €</i> berechnet, aber nie unter <i>UVP × (1 − Rabatt%)</i>.
+              Für komplexere Regeln → <b style="color:var(--text);">Einstellungen → Preisstrategien → Cube Fahrrad</b>.
+            </div>
+          </div>
           <div class="fg">
             <label>Max. Rabatt auf UVP</label>
             <select id="stratDiscount" onchange="cubeApplyFilters()">
@@ -1058,7 +1065,10 @@
             <span style="font-size:13px;font-weight:500;">Preistabelle</span>
             <span style="font-size:11px;color:var(--muted);" id="cubeRowCount"></span>
           </div>
-          <button class="pill" onclick="cubeDownloadCSV()">CSV Export</button>
+          <div style="display:flex;gap:6px;">
+            <button class="pill" onclick="downloadCubeExcel()" style="font-size:11px;">⬇ Excel</button>
+            <button class="pill" onclick="cubeDownloadCSV()" style="font-size:11px;">CSV Export</button>
+          </div>
         </div>
         <div style="overflow-x:auto;">
           <table style="width:100%;border-collapse:collapse;font-size:12px;">
@@ -1312,6 +1322,8 @@ var searchTerm = '';
 // ── Datenquelle wechseln ──
 function onSourceChange(source) {
   currentSource = source;
+  // Immediately hide/show panels before fetch
+  toggleCubePanel(source === 'cube');
   var sel = document.getElementById('sourceSelect');
   var spinner = document.getElementById('sourceLoading');
   var chevron = document.querySelector('.source-chevron');
@@ -2878,5 +2890,59 @@ function updateCubeStratBlock() {
   }
 }
 
+// ── Excel Downloads (SheetJS) ──
+function downloadNormalExcel() {
+  var filtered = getFilteredData();
+  if (!filtered.length) { showToast('Keine Daten zum Exportieren.', true); return; }
+  var rows = [['Produktname','Marke','Season','Mein Preis','Mein Rabatt','Niedrigster','Günstigster Anbieter','Höchster','Index','Zielpreis','Rabatt (Ziel)','Potenzial','UVP','Shops','Position']];
+  filtered.forEach(function(r) {
+    var sm = (r.name||'').match(/\b(20\d{2})\b/);
+    var season = sm ? sm[1] : (/aktion/i.test(r.name||'') ? 'Aktion' : '');
+    var niedrig = !isNaN(r.niedrigster) && r.niedrigster > 0 ? r.niedrigster : r.cheapest_price;
+    var idx = (!isNaN(r.my_price) && !isNaN(niedrig) && niedrig > 0) ? +(r.my_price / niedrig * 100).toFixed(1) : '';
+    var myRab = (!isNaN(r.uvp) && r.uvp > 0 && !isNaN(r.my_price)) ? +((r.uvp-r.my_price)/r.uvp*100).toFixed(1) : '';
+    var hasZiel = r.zielpreis !== undefined && r.zielpreis !== null;
+    var rabZiel = (hasZiel && !isNaN(r.uvp) && r.uvp > 0) ? +((r.uvp-r.zielpreis)/r.uvp*100).toFixed(1) : '';
+    var pot = hasZiel ? +(r.zielpreis - r.my_price).toFixed(2) : '';
+    rows.push([r.name||'', r.brand||'', season, r.my_price||'', myRab, niedrig||'', r.cheapest_provider||'', r.hoechster||'', idx, r.zielpreis||'', rabZiel, pot, r.uvp||'', r.num_shops||'', r.position||'']);
+  });
+  excelExport(rows, 'preisanpassungen_' + currentSource + '.xlsx');
+}
+
+function downloadCubeExcel() {
+  if (!filteredClusters || !filteredClusters.length) { showToast('Keine Daten zum Exportieren.', true); return; }
+  var rows = [['Produktname','Modellnummern','Season','Mein Preis','Mein Rabatt','Ø Markt','Niedrigster','Günstigster Shop','Höchster','Preisindex','Zielpreis','Rabatt (Ziel)','Potenzial','Status','Empfehlung','UVP','Shops']];
+  filteredClusters.forEach(function(c) {
+    var myRab = (c.myPrice && c.uvp) ? +((c.uvp-c.myPrice)/c.uvp*100).toFixed(1) : '';
+    var rabZiel = (c.targetPrice && c.uvp) ? +((c.uvp-c.targetPrice)/c.uvp*100).toFixed(1) : '';
+    var pot = (c.targetPrice && c.myPrice) ? +(c.targetPrice-c.myPrice).toFixed(2) : '';
+    var idx = c.priceIndex ? +c.priceIndex.toFixed(1) : '';
+    rows.push([c.name||'', c.modellnummern?c.modellnummern.join(', '):'', c.season||'', c.myPrice||'', myRab, c.avgMarket?+c.avgMarket.toFixed(2):'', c.minPrice||'', c.cheapestShop||'', c.maxPrice||'', idx, c.targetPrice||'', rabZiel, pot, c.status||'', c.action||'', c.uvp||'', c.shops?c.shops.length:'']);
+  });
+  excelExport(rows, 'cube_preisanalyse.xlsx');
+}
+
+function excelExport(rows, filename) {
+  // Use SheetJS if available, otherwise fall back to CSV
+  if (typeof XLSX !== 'undefined') {
+    var ws = XLSX.utils.aoa_to_sheet(rows);
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Daten');
+    // Auto column widths
+    var cols = rows[0].map(function(h, i) {
+      var max = rows.reduce(function(m, r) { return Math.max(m, String(r[i]||'').length); }, h.length);
+      return { wch: Math.min(max + 2, 40) };
+    });
+    ws['!cols'] = cols;
+    XLSX.writeFile(wb, filename);
+  } else {
+    // Fallback: CSV download
+    var csv = rows.map(function(r) { return r.map(function(v) { return '"'+String(v||'').replace(/"/g,'""')+'"'; }).join(';'); }).join('\n');
+    var a = document.createElement('a');
+    a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
+    a.download = filename.replace('.xlsx', '.csv');
+    a.click();
+  }
+}
 
 </script>
