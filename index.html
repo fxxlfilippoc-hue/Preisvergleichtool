@@ -1097,6 +1097,9 @@
       <button class="settings-nav-btn active" data-settings="preisstrategien" onclick="settingsNav(this,'preisstrategien')" style="font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;padding:10px 20px;border:none;background:none;cursor:pointer;color:var(--text);border-bottom:2px solid var(--accent);margin-bottom:-1px;">
         Preisstrategien
       </button>
+      <button class="settings-nav-btn" data-settings="statusdefs" onclick="settingsNav(this,'statusdefs')" style="font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;padding:10px 20px;border:none;background:none;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;">
+        Statusdefinitionen
+      </button>
       <button class="settings-nav-btn" data-settings="placeholder" onclick="settingsNav(this,'placeholder')" style="font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;padding:10px 20px;border:none;background:none;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;">
         Weitere Einstellungen
       </button>
@@ -1281,6 +1284,79 @@
       <b style="color:var(--text);">Zielposition </b>→ Strebt Platz 1 (−10 €) oder Platz 2+ (gleicher Preis) an.<br>
       <b style="color:var(--text);">Min / Max % </b>→ Definiert einen Preiskorridor. <b>Min Preis</b> = niedrigster Zielpreis (z.B. 30% Rabatt = UVP×0,70). <b>Max Preis</b> = höchster Zielpreis (z.B. 20% Rabatt = UVP×0,80). Der Zielpreis folgt dem Markt innerhalb dieses Korridors.
     </div>
+    </div>
+
+    <!-- Panel: Statusdefinitionen -->
+    <div id="settings-statusdefs" class="settings-panel" style="display:none;">
+      <p class="section-title">Statusdefinitionen — Cube Preisanalyse</p>
+
+      <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1.1rem 1.25rem;margin-bottom:1rem;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:12px;">Schwellenwerte (Preisindex = Mein Preis ÷ Ø Markt × 100)</div>
+
+        <!-- Kritisch -->
+        <div style="display:flex;align-items:flex-start;gap:16px;padding:14px 0;border-bottom:0.5px solid var(--border);">
+          <div style="width:28px;height:28px;border-radius:50%;background:#FDEAEA;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;">🔴</div>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:600;color:#B91C1C;margin-bottom:3px;">Kritisch</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Dein Preis liegt deutlich über dem günstigsten Konkurrenten. Aktiver Verkaufsverlust — Preis senken empfohlen.</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:12px;color:var(--muted);">Preisindex über</span>
+              <input id="thresh_kritisch" type="number" value="109" min="100" max="150" step="1"
+                style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:5px 8px;width:70px;text-align:center;">
+              <span style="font-size:12px;color:var(--muted);">%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Marge verschenkt -->
+        <div style="display:flex;align-items:flex-start;gap:16px;padding:14px 0;border-bottom:0.5px solid var(--border);">
+          <div style="width:28px;height:28px;border-radius:50%;background:#FFFBEB;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;">🟡</div>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:600;color:#92400E;margin-bottom:3px;">Marge verschenkt</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Dein Preis liegt unter dem Marktdurchschnitt. Du bist günstiger als nötig — Preis erhöhen möglich ohne Wettbewerbsvorteil zu verlieren.</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:12px;color:var(--muted);">Preisindex unter</span>
+              <input id="thresh_marge" type="number" value="100" min="80" max="110" step="1"
+                style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:5px 8px;width:70px;text-align:center;">
+              <span style="font-size:12px;color:var(--muted);">%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Optimal -->
+        <div style="display:flex;align-items:flex-start;gap:16px;padding:14px 0;border-bottom:0.5px solid var(--border);">
+          <div style="width:28px;height:28px;border-radius:50%;background:#ECFDF5;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;">🟢</div>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:600;color:#065F46;margin-bottom:3px;">Optimal</div>
+            <div style="font-size:11px;color:var(--muted);">Dein Preis liegt im normalen Marktbereich — zwischen Marge-verschenkt und Kritisch. Kein Handlungsbedarf.</div>
+          </div>
+          <div style="font-size:11px;color:var(--muted);text-align:right;white-space:nowrap;padding-top:2px;">
+            Automatisch: alles dazwischen
+          </div>
+        </div>
+
+        <!-- NC -->
+        <div style="display:flex;align-items:flex-start;gap:16px;padding:14px 0;">
+          <div style="width:28px;height:28px;border-radius:50%;background:#F3F4F6;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;">⚫</div>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:600;color:#4B5563;margin-bottom:3px;">Nicht wettbewerbsfähig (NC)</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Der günstigste Marktpreis liegt unter deinem Mindestpreis (UVP × Max-Rabatt%). Du kannst preislich nicht mithalten. Kein Zielpreis wird berechnet.</div>
+            <div style="font-size:11px;color:var(--muted);">Wird automatisch gesetzt wenn Mindestpreis unterschritten — kein Schwellenwert konfigurierbar.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Speichern Button -->
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button onclick="saveStatusThresholds()" style="font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:8px 20px;border-radius:var(--radius);border:none;background:var(--accent);color:#fff;cursor:pointer;">
+          Schwellenwerte speichern
+        </button>
+        <button onclick="resetStatusThresholds()" style="font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;padding:8px 16px;border-radius:var(--radius);border:0.5px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;">
+          Zurücksetzen
+        </button>
+        <span id="threshSaveMsg" style="font-size:11px;color:var(--green);display:none;">✓ Gespeichert</span>
+      </div>
+
     </div>
 
     <!-- Panel: Placeholder -->
@@ -2055,8 +2131,8 @@ function cubeCalcCluster(c, minAllowed, uvp){
   var status='optimal';
   if(ncFlag) status='nc';
   else if(myPrice!==null&&c.minPrice!==null&&c.avgMarket!==null){
-    if(myPrice>c.minPrice*1.09&&targetPrice!==null&&targetPrice>=(minAllowed||0)) status='kritisch';
-    else if(myPrice<c.avgMarket) status='marge';
+    if(c.priceIndex!==null&&c.priceIndex>statusThresholds.kritisch&&targetPrice!==null&&targetPrice>=(minAllowed||0)) status='kritisch';
+    else if(c.priceIndex!==null&&c.priceIndex<statusThresholds.marge) status='marge';
   }
   var potential=(myPrice!==null&&targetPrice!==null)?targetPrice-myPrice:null;
   var action='keep';
@@ -2986,5 +3062,74 @@ function excelExport(rows, filename) {
     a.click();
   }
 }
+// ── Status Schwellenwerte ──
+var statusThresholds = { kritisch: 109, marge: 100 };
+
+// Load saved thresholds
+(function() {
+  try {
+    var saved = localStorage.getItem('fxxl_thresholds');
+    if (saved) {
+      var p = JSON.parse(saved);
+      if (p.kritisch) statusThresholds.kritisch = p.kritisch;
+      if (p.marge)    statusThresholds.marge    = p.marge;
+    }
+  } catch(e) {}
+  // Apply to inputs when settings panel opens
+})();
+
+function saveStatusThresholds() {
+  var k = parseInt(document.getElementById('thresh_kritisch').value) || 109;
+  var m = parseInt(document.getElementById('thresh_marge').value)    || 100;
+  statusThresholds.kritisch = k;
+  statusThresholds.marge    = m;
+  try { localStorage.setItem('fxxl_thresholds', JSON.stringify(statusThresholds)); } catch(e) {}
+  var msg = document.getElementById('threshSaveMsg');
+  if (msg) { msg.style.display='inline'; setTimeout(function(){msg.style.display='none';},2000); }
+  // Re-apply to cube clusters if loaded
+  if (allClusters && allClusters.length) {
+    allClusters.forEach(function(c) { applyStatusThreshold(c); });
+    if (filteredClusters && filteredClusters.length) {
+      filteredClusters.forEach(function(c) { applyStatusThreshold(c); });
+    }
+    cubeRenderKPIs(filteredClusters);
+    cubeRenderInsights(filteredClusters);
+    cubeRenderTable(filteredClusters);
+  }
+}
+
+function resetStatusThresholds() {
+  statusThresholds = { kritisch: 109, marge: 100 };
+  try { localStorage.removeItem('fxxl_thresholds'); } catch(e) {}
+  document.getElementById('thresh_kritisch').value = 109;
+  document.getElementById('thresh_marge').value    = 100;
+  saveStatusThresholds();
+}
+
+function applyStatusThreshold(c) {
+  if (c.ncFlag) { c.status = 'nc'; return; }
+  if (c.myPrice !== null && c.minPrice !== null && c.avgMarket !== null) {
+    if (c.priceIndex !== null && c.priceIndex > statusThresholds.kritisch && c.targetPrice !== null) {
+      c.status = 'kritisch';
+    } else if (c.priceIndex !== null && c.priceIndex < statusThresholds.marge) {
+      c.status = 'marge';
+    } else {
+      c.status = 'optimal';
+    }
+  }
+}
+
+// Sync inputs when navigating to settings panel
+var _origSettingsNav = settingsNav;
+settingsNav = function(btn, panel) {
+  _origSettingsNav(btn, panel);
+  if (panel === 'statusdefs') {
+    var ki = document.getElementById('thresh_kritisch');
+    var mi = document.getElementById('thresh_marge');
+    if (ki) ki.value = statusThresholds.kritisch;
+    if (mi) mi.value = statusThresholds.marge;
+  }
+};
+
 
 </script>
