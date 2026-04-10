@@ -1242,14 +1242,7 @@
         ↓ Aus Datenbank laden
       </button>
       <div style="width:1px;height:20px;background:var(--border);margin:0 4px;"></div>
-      <!-- Datenbank Buttons -->
-      <button onclick="supaSaveStrat(stratCurrentSrc)" style="font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:8px 16px;border-radius:var(--radius);border:none;background:#1a7a3f;color:#fff;cursor:pointer;">
-        ☁ In Datenbank speichern
-      </button>
-      <button onclick="supaLoadStrat(stratCurrentSrc)" style="font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;padding:7px 14px;border-radius:var(--radius);border:0.5px solid #1a7a3f;background:var(--surface);color:#1a7a3f;cursor:pointer;">
-        ↓ Aus Datenbank laden
-      </button>
-      <div style="width:1px;height:20px;background:var(--border);margin:0 2px;"></div>
+      
       <input type="file" id="stratCsvInput" accept=".csv" style="display:none;" onchange="stratLoadCSV(this.files[0])">
       <button class="pill" onclick="document.getElementById('stratCsvInput').click()" style="height:32px;padding:0 14px;font-size:12px;">CSV hochladen</button>
       <button class="pill" onclick="stratDownloadTemplate()" style="height:32px;padding:0 14px;font-size:12px;color:var(--muted);">Vorlage herunterladen</button>
