@@ -1238,7 +1238,7 @@
       <button onclick="supaSaveStrat(stratCurrentSrc)" style="font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:8px 16px;border-radius:var(--radius);border:none;background:#1a7a3f;color:#fff;cursor:pointer;">
         ☁ In Datenbank speichern
       </button>
-      <button onclick="supaLoadStrat(stratCurrentSrc)" class="pill" style="height:32px;padding:0 14px;font-size:12px;color:#1a7a3f;">
+      <button onclick="supaLoadStrat(stratCurrentSrc, true)" class="pill" style="height:32px;padding:0 14px;font-size:12px;color:#1a7a3f;">
         ↓ Aus Datenbank laden
       </button>
       <div style="width:1px;height:20px;background:var(--border);margin:0 4px;"></div>
@@ -1886,7 +1886,7 @@ function checkPw() {
     sessionStorage.setItem('px_auth', '1');
     document.getElementById('pwOverlay').style.display = 'none';
     setTimeout(function() {
-      ['cube','fahrraeder','zubehoer'].forEach(function(src) { supaLoadStrat(src); });
+      ['cube','fahrraeder','zubehoer'].forEach(function(src) { supaLoadStrat(src, false); });
       stratUpdateTableBtn();
     }, 100);
   } else {
@@ -1913,7 +1913,7 @@ window.addEventListener('load', function() {
     if (sessionStorage.getItem('px_auth')) {
       // Strategien aus Supabase laden (für alle Quellen)
       ['cube','fahrraeder','zubehoer'].forEach(function(src) {
-        supaLoadStrat(src);
+        supaLoadStrat(src, false);
       });
       stratUpdateTableBtn();
     } else {
@@ -2668,7 +2668,7 @@ function stratSelectSource(btn, src) {
   var sel = document.getElementById('sourceSelect');
   if (sel) { sel.value = src; onSourceChange(src); }
   // Auto-load from Supabase
-  supaLoadStrat(src);
+  supaLoadStrat(src, false);
 }
 
 function stratSetPrio(btn, prio) {
@@ -3165,10 +3165,17 @@ function supaFetch(method, path, body) {
 }
 
 // Load strategies from Supabase for a given source
-function supaLoadStrat(src) {
-  stratShowBanner('Lade Strategien aus Datenbank…', 'info');
+function supaLoadStrat(src, showBanner) {
+  if (showBanner) stratShowBanner('Lade Strategien aus Datenbank…', 'info');
   return supaFetch('GET', 'preisstrategien?datenquelle=eq.' + src + '&order=prioritaet.asc')
     .then(function(rows) {
+      if (!rows || !rows.length) {
+        // No rules in DB - keep local rules, don't overwrite
+        if (showBanner) {
+          stratShowBanner('Keine Regeln in der Datenbank für ' + stratSrcLabel(src) + '.', 'info');
+        }
+        return;
+      }
       var rules = rows.map(function(r) {
         return {
           id:             r.id,
@@ -3187,28 +3194,31 @@ function supaLoadStrat(src) {
       rules.sort(function(a,b){ return b.prioritaet - a.prioritaet; });
       stratData[src] = rules;
       stratApplied[src] = false;
-      stratSave(); // also keep in localStorage as cache
-      stratRenderTable();
-      if (rules.length > 0) {
+      stratSave();
+      if (src === stratCurrentSrc) stratRenderTable();
+      stratUpdateTableBtn();
+      if (showBanner) {
         stratShowBanner('✓ ' + rules.length + ' Regeln aus Datenbank geladen.', 'success');
-      } else {
-        stratShowBanner('Keine Regeln in der Datenbank für ' + stratSrcLabel(src) + '.', 'info');
       }
     })
     .catch(function(e) {
       console.error('Supabase load error:', e);
-      stratShowBanner('⚠ Datenbank nicht erreichbar — lokale Regeln werden verwendet.', 'warning');
+      if (showBanner) stratShowBanner('⚠ Datenbank nicht erreichbar — lokale Regeln werden verwendet.', 'warning');
     });
 }
 
 // Save all rules for current source to Supabase
 function supaSaveStrat(src) {
   var rules = stratData[src] || [];
+  if (!rules.length) {
+    stratShowBanner('Keine Regeln zum Speichern — bitte zuerst Regeln hinzufügen.', 'warning');
+    return;
+  }
+  stratShowBanner('Speichere ' + rules.length + ' Regeln…', 'info');
   // 1. Delete existing rules for this source
-  return supaFetch('DELETE', 'preisstrategien?datenquelle=eq.' + src)
+  supaFetch('DELETE', 'preisstrategien?datenquelle=eq.' + src)
     .then(function() {
-      if (!rules.length) return [];
-      // 2. Insert all current rules
+      // 2. Insert all current rules one by one to avoid array issues
       var inserts = rules.map(function(r) {
         return {
           datenquelle:    src,
@@ -3227,11 +3237,11 @@ function supaSaveStrat(src) {
       return supaFetch('POST', 'preisstrategien', inserts);
     })
     .then(function() {
-      stratShowBanner('✓ ' + rules.length + ' Regeln in Datenbank gespeichert — für alle Nutzer sichtbar.', 'success');
+      stratShowBanner('✓ ' + rules.length + ' Regeln gespeichert — für alle Nutzer sichtbar.', 'success');
     })
     .catch(function(e) {
       console.error('Supabase save error:', e);
-      stratShowBanner('⚠ Fehler beim Speichern: ' + e.message, 'error');
+      stratShowBanner('⚠ Fehler: ' + e.message + ' — bitte prüfe ob RLS deaktiviert ist.', 'error');
     });
 }
 
