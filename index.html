@@ -3415,7 +3415,7 @@ function loadMasterfeed() {
       rows.forEach(function(r) {
         var sku = (r['sku'] || r['SKU'] || '').trim().toUpperCase();
         if (!sku) return;
-        masterfeedData[sku] = {
+        masterfeedData[sku.toUpperCase()] = {
           name:           r['name'] || '',
           model:          r['model'] || '',
           brand:          r['brand'] || '',
@@ -3458,17 +3458,17 @@ function loadMasterfeed() {
             var mf = masterfeedData[(c.skus[si]||'').toUpperCase()];
             if (mf) {
               c.mfBrand          = mf.brand          || '';
-              c.mfCat1           = mf.Cat1            || '';
-              c.mfCat2           = mf.Cat2            || '';
-              c.mfCat3           = mf.Cat3            || '';
-              c.mfCat4           = mf.Cat4            || '';
-              c.mfGeschlecht     = mf.Geschlecht      || '';
-              c.mfRadgroesse     = mf.Radgroesse      || '';
-              c.mfRahmenmaterial = mf.Rahmenmaterial  || '';
-              c.mfRahmenform     = mf.Rahmenform      || '';
-              c.mfGaenge         = mf.Gaenge          || '';
-              c.mfSchaltart      = mf.Schaltart       || '';
-              c.mfFarbe          = mf.Farbe           || '';
+              c.mfCat1           = mf.cat1            || '';
+              c.mfCat2           = mf.cat2            || '';
+              c.mfCat3           = mf.cat3            || '';
+              c.mfCat4           = mf.cat4            || '';
+              c.mfGeschlecht     = mf.geschlecht      || '';
+              c.mfRadgroesse     = mf.radgroesse      || '';
+              c.mfRahmenmaterial = mf.rahmenmaterial  || '';
+              c.mfRahmenform     = mf.rahmenform      || '';
+              c.mfGaenge         = mf.gaenge          || '';
+              c.mfSchaltart      = mf.schaltart       || '';
+              c.mfFarbe          = mf.farbe           || '';
               break;
             }
           }
