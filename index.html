@@ -1484,7 +1484,7 @@ function onSourceChange(source) {
         else loadMasterfeed();
       }
       populateCatFilters();
-    populateMasterfeedFilters();
+      populateMasterfeedFilters();
       stratUpdateTableBtn();
       // Auto-apply strategy if rules exist for this source
       var rules = stratData[source] || [];
@@ -2471,6 +2471,37 @@ function cubeApplyFilters(){
   cubeRenderKPIs(filteredClusters);
   cubeRenderInsights(filteredClusters);
   cubeRenderTable(filteredClusters);
+}
+
+function populateMasterfeedFilters() {
+  if (!allClusters || !allClusters.length) return;
+  var fields = {
+    'ovBrand':          'mfBrand',
+    'ovCat1':           'mfCat1',
+    'ovCat2':           'mfCat2',
+    'ovCat3':           'mfCat3',
+    'ovCat4':           'mfCat4',
+    'ovGeschlecht':     'mfGeschlecht',
+    'ovRadgroesse':     'mfRadgroesse',
+    'ovRahmenmaterial': 'mfRahmenmaterial',
+    'ovRahmenform':     'mfRahmenform',
+    'ovGaenge':         'mfGaenge',
+    'ovSchaltart':      'mfSchaltart',
+    'ovFarbe':          'mfFarbe'
+  };
+  Object.keys(fields).forEach(function(id) {
+    var prop = fields[id];
+    var sel = document.getElementById(id);
+    if (!sel) return;
+    var cur = sel.value;
+    var vals = {};
+    allClusters.forEach(function(c) { if (c[prop]) vals[c[prop]] = 1; });
+    var opts = Object.keys(vals).sort();
+    sel.innerHTML = '<option value="">Alle</option>'
+      + opts.map(function(v) {
+          return '<option value="' + v + '"' + (v === cur ? ' selected' : '') + '>' + v + '</option>';
+        }).join('');
+  });
 }
 
 function cubeClearFilters(){
@@ -3485,7 +3516,7 @@ function loadMasterfeed() {
             }
           }
         });
-        populateMasterfeedFilters();
+          populateMasterfeedFilters();
       }
       // Re-render cube with enriched names + bestand
       if (typeof allClusters !== 'undefined' && allClusters && allClusters.length) {
