@@ -2492,6 +2492,14 @@ function cubeApplyFilters(){
     tagsEl.innerHTML='';
   }
 
+  // Sync totalQty on filtered clusters before KPI render
+  if (masterfeedLoaded) {
+    filteredClusters.forEach(function(c) {
+      var q = 0;
+      if (c.skus) c.skus.forEach(function(s){ var su=s.toUpperCase(); if(masterfeedData[su]) q += (masterfeedData[su].qty||0); });
+      c.totalQty = q;
+    });
+  }
   cubePageCurrent=1;
   cubeRenderKPIs(filteredClusters);
   cubeRenderInsights(filteredClusters);
@@ -2663,8 +2671,8 @@ function cubeRenderTable(src){
     if(av===null||av===undefined) return 1;
     if(bv===null||bv===undefined) return -1;
     var numCols={'totalQty':1,'priceIndex':1,'myPrice':1,'avgMarket':1,'minPrice':1,'maxPrice':1,'targetPrice':1,'potential':1};
-    if(numCols[cubeSortCol]){av=parseFloat(av)||0;bv=parseFloat(bv)||0;}
-    return av>bv?cubeSortDir:-cubeSortDir;
+    if(numCols[cubeSortCol]){av=parseFloat(av)||0;bv=parseFloat(bv)||0; return (av-bv)*cubeSortDir;}
+    return av>bv?cubeSortDir:(av<bv?-cubeSortDir:0);
   });
   var total=sorted.length;
   var start=(cubePageCurrent-1)*cubePageSize;
@@ -2737,10 +2745,13 @@ function cubeRenderTable(src){
       '<td style="'+td+'">'+cubeStatusBadge(c.status)+'</td>' +
       '<td style="'+mono+'color:#888;">'+cubeFmtE(c.uvp)+'</td>' +
       (function(){
-        // Bestand cell
+        // Bestand cell — use c.totalQty so sort matches display
         var qty = 0;
         if (masterfeedLoaded && c.skus) {
           c.skus.forEach(function(s){ var su=s.toUpperCase(); if(masterfeedData[su]) qty += (masterfeedData[su].qty||0); });
+          c.totalQty = qty; // keep in sync for sort
+        } else {
+          qty = c.totalQty || 0;
         }
         var td3 = 'padding:7px 12px;vertical-align:middle;border-bottom:0.5px solid #e8e6e0;font-size:13px;';
         if (!masterfeedLoaded) return '<td style="'+td3+'color:#ccc;">—</td>';
@@ -3480,6 +3491,11 @@ function loadMasterfeed() {
     .then(function(text) {
       console.log('[Masterfeed] Erste 200 Zeichen:', text.substring(0,200));
       var rows = parseCSVPipe(text);
+      if (rows.length > 0) {
+        console.log('Masterfeed Spalten:', Object.keys(rows[0]));
+        console.log('Masterfeed Zeile 1:', rows[0]);
+        showToast('MF-Spalten: ' + Object.keys(rows[0]).slice(0,6).join(' | '), false);
+      }
       masterfeedData = {};
       var cat1s = {}, cat2s = {}, cat3s = {}, cat4s = {};
       rows.forEach(function(r) {
