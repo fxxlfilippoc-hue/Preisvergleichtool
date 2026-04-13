@@ -898,6 +898,30 @@
             <option value="100+">Über 100 €</option>
           </select>
         </div>
+        <div class="fg">
+          <label>Cat1</label>
+          <select id="catFilter1" onchange="applyCatFilter(1, this.value)" style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;min-width:120px;">
+            <option value="">Alle</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Cat2</label>
+          <select id="catFilter2" onchange="applyCatFilter(2, this.value)" style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;min-width:120px;">
+            <option value="">Alle</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Cat3</label>
+          <select id="catFilter3" onchange="applyCatFilter(3, this.value)" style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;min-width:120px;">
+            <option value="">Alle</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Cat4</label>
+          <select id="catFilter4" onchange="applyCatFilter(4, this.value)" style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;min-width:120px;">
+            <option value="">Alle</option>
+          </select>
+        </div>
         <div class="filter-actions">
           <button class="pill" onclick="normalClearFilters()" style="height:32px;">Zurücksetzen</button>
         </div>
@@ -939,6 +963,7 @@
             <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;">Empfehlung</th>
             <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;">Status</th>
             <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;">UVP</th>
+            <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;">Bestand</th>
             <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;width:110px;">Shops</th>
           </tr>
         </thead>
@@ -1432,6 +1457,9 @@ function onSourceChange(source) {
       showToast(label + ': ' + parsed.length.toLocaleString('de-DE') + ' Artikel geladen');
       toggleCubePanel(source === 'cube');
       if(source === 'cube') { cubeBuildDashboard(parsed); updateCubeStratBlock(); }
+      if (masterfeedLoaded) enrichTableWithMasterfeed();
+      else loadMasterfeed();
+      populateCatFilters();
       stratUpdateTableBtn();
       // Auto-apply strategy if rules exist for this source
       var rules = stratData[source] || [];
@@ -1787,6 +1815,12 @@ function renderTable() {
       '<td style="'+td+'color:#ccc;">—</td>' +
       '<td style="'+td+'color:#ccc;">—</td>' +
       '<td style="'+mono+'color:#888;">'+uvpStr+'</td>' +
+      (function(){
+        var q = r.qty;
+        if (q === undefined || q === null) return '<td style="'+td+'color:#ccc;">—</td>';
+        var qClr = q === 0 ? '#c0392b' : q < 5 ? '#92400E' : '#1a7a3f';
+        return '<td style="'+td+'font-weight:600;color:'+qClr+';">'+q+'</td>';
+      })() +
       '<td style="'+td+'">' +
         '<div style="font-weight:600;color:#185FA5;font-size:12px;">'+(r.cheapest_provider||'—')+'</div>' +
         '<div style="font-size:11px;color:#888;">'+shopsStr+'</div>' +
@@ -1911,10 +1945,12 @@ window.addEventListener('load', function() {
   setTimeout(function() {
     document.getElementById('loadingOverlay').style.display = 'none';
     if (sessionStorage.getItem('px_auth')) {
-      // Strategien aus Supabase laden (für alle Quellen)
+      // Strategien aus Supabase laden
       ['cube','fahrraeder','zubehoer'].forEach(function(src) {
         supaLoadStrat(src, false);
       });
+      // Masterfeed laden
+      loadMasterfeed();
       stratUpdateTableBtn();
     } else {
       document.getElementById('pwOverlay').style.display = 'flex';
@@ -3248,6 +3284,136 @@ function supaSaveStrat(src) {
 // Load on source change in Einstellungen
 function supaLoadOnSourceChange(src) {
   supaLoadStrat(src);
+}
+
+// ══════════════════════════════════════════
+// MASTERFEED INTEGRATION
+// ══════════════════════════════════════════
+var MASTERFEED_URL = 'https://raw.githubusercontent.com/fxxlfilippoc-hue/Preisvergleichtool/main/fxxl_masterfeed-2018.csv';
+var masterfeedData = {}; // SKU → product object
+var masterfeedLoaded = false;
+var masterfeedCat1 = [], masterfeedCat2 = [], masterfeedCat3 = [], masterfeedCat4 = [];
+
+function loadMasterfeed() {
+  if (masterfeedLoaded) return Promise.resolve();
+  return fetch(MASTERFEED_URL)
+    .then(function(r) { return r.text(); })
+    .then(function(text) {
+      var rows = parseCSVPipe(text);
+      masterfeedData = {};
+      var cat1s = {}, cat2s = {}, cat3s = {}, cat4s = {};
+      rows.forEach(function(r) {
+        var sku = (r['sku'] || r['SKU'] || '').trim();
+        if (!sku) return;
+        masterfeedData[sku] = {
+          name:           r['name'] || '',
+          model:          r['model'] || '',
+          brand:          r['brand'] || '',
+          qty:            parseInt(r['qty']) || 0,
+          uvp:            parseFloat(r['price']) || 0,
+          my_price_feed:  parseFloat(r['special_price']) || 0,
+          cat1:           r['Cat1'] || '',
+          cat2:           r['Cat2'] || '',
+          cat3:           r['Cat3'] || '',
+          cat4:           r['Cat4'] || '',
+          hauptwg:        r['Hauptwarengruppe'] || '',
+          saison:         r['Saison'] || '',
+          geschlecht:     r['Geschlecht'] || '',
+          radgroesse:     r['Radgroesse'] || '',
+          rahmenmaterial: r['Rahmenmaterial'] || '',
+          rahmenform:     r['Rahmenform'] || '',
+          gaenge:         r['Gaenge'] || '',
+          schaltart:      r['Schaltart'] || '',
+          farbe:          r['Farbe'] || ''
+        };
+        if (r['Cat1']) cat1s[r['Cat1']] = 1;
+        if (r['Cat2']) cat2s[r['Cat2']] = 1;
+        if (r['Cat3']) cat3s[r['Cat3']] = 1;
+        if (r['Cat4']) cat4s[r['Cat4']] = 1;
+      });
+      masterfeedCat1 = Object.keys(cat1s).sort();
+      masterfeedCat2 = Object.keys(cat2s).sort();
+      masterfeedCat3 = Object.keys(cat3s).sort();
+      masterfeedCat4 = Object.keys(cat4s).sort();
+      masterfeedLoaded = true;
+      console.log('Masterfeed geladen:', Object.keys(masterfeedData).length, 'Produkte');
+      // Enrich existing table data if already loaded
+      if (DATA.table && DATA.table.length) enrichTableWithMasterfeed();
+      populateCatFilters();
+    })
+    .catch(function(e) { console.warn('Masterfeed konnte nicht geladen werden:', e); });
+}
+
+// CSV parser for pipe-separated files
+function parseCSVPipe(text) {
+  var lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  // Auto-detect separator: | or ;
+  var sep = lines[0].indexOf('|') > -1 ? '|' : ';';
+  var headers = lines[0].split(sep).map(function(h) { return h.trim(); });
+  var rows = [];
+  for (var i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    var vals = lines[i].split(sep);
+    var obj = {};
+    headers.forEach(function(h, j) { obj[h] = (vals[j] || '').trim(); });
+    rows.push(obj);
+  }
+  return rows;
+}
+
+// Enrich DATA.table rows with masterfeed info
+function enrichTableWithMasterfeed() {
+  if (!DATA.table) return;
+  DATA.table.forEach(function(row) {
+    var feed = masterfeedData[row.sku];
+    if (!feed) return;
+    // Enrich with masterfeed data
+    row.qty            = feed.qty;
+    row.cat1           = feed.cat1;
+    row.cat2           = feed.cat2;
+    row.cat3           = feed.cat3;
+    row.cat4           = feed.cat4;
+    row.geschlecht     = feed.geschlecht;
+    row.radgroesse     = feed.radgroesse;
+    row.rahmenmaterial = feed.rahmenmaterial;
+    row.rahmenform     = feed.rahmenform;
+    row.gaenge         = feed.gaenge;
+    row.schaltart      = feed.schaltart;
+    row.farbe          = feed.farbe;
+    row.hauptwg        = feed.hauptwg;
+    // Use feed UVP if ShopTracker UVP is missing
+    if ((!row.uvp || isNaN(row.uvp) || row.uvp <= 0) && feed.uvp > 0) {
+      row.uvp = feed.uvp;
+    }
+    // Use feed brand if missing
+    if (!row.brand && feed.brand) row.brand = feed.brand;
+  });
+}
+
+// Populate Cat filter dropdowns
+function populateCatFilters() {
+  ['1','2','3','4'].forEach(function(n) {
+    var sel = document.getElementById('catFilter' + n);
+    if (!sel) return;
+    var cats = n==='1'?masterfeedCat1:n==='2'?masterfeedCat2:n==='3'?masterfeedCat3:masterfeedCat4;
+    var cur = sel.value;
+    sel.innerHTML = '<option value="">Alle</option>';
+    cats.forEach(function(c) {
+      var o = document.createElement('option');
+      o.value = c; o.textContent = c;
+      if (c === cur) o.selected = true;
+      sel.appendChild(o);
+    });
+  });
+}
+
+// Cat filter values
+var activeCatFilters = { cat1:'', cat2:'', cat3:'', cat4:'' };
+
+function applyCatFilter(n, val) {
+  activeCatFilters['cat'+n] = val;
+  normalApplyFilters();
 }
 
 
