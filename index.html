@@ -3447,9 +3447,7 @@ function loadMasterfeed() {
       masterfeedCat4 = Object.keys(cat4s).sort();
       masterfeedLoaded = true;
       var mfKeys = Object.keys(masterfeedData);
-      var mfSample = mfKeys.slice(0,2).map(function(k){return k+':qty='+masterfeedData[k].qty;}).join(' | ');
-      showToast('MF: '+mfKeys.length+' SKUs | '+mfSample, false);
-      console.log('[Masterfeed] Geladen:', mfKeys.length, 'Produkte, Beispiel-SKUs:', mfKeys.slice(0,5));
+      console.log('[Masterfeed] Geladen:', mfKeys.length, 'Produkte');
       // Enrich existing table data if already loaded
       if (DATA.table && DATA.table.length) enrichTableWithMasterfeed();
       // Enrich clusters with masterfeed attributes for new filters
@@ -3509,17 +3507,28 @@ function loadMasterfeed() {
 
 // CSV parser for pipe-separated files
 function parseCSVPipe(text) {
+  text = text.replace(/^\uFEFF/, ''); // strip BOM
   var lines = text.trim().split(/\r?\n/);
   if (lines.length < 2) return [];
-  // Auto-detect separator: | or ;
-  var sep = lines[0].indexOf('|') > -1 ? '|' : ';';
-  var headers = lines[0].split(sep).map(function(h) { return h.trim(); });
+  // Auto-detect separator: count | vs ; in header line
+  var h0 = lines[0];
+  var sep = (h0.split('|').length > h0.split(';').length) ? '|' : ';';
+  var headers = h0.split(sep).map(function(h) { return h.trim().replace(/^"(.*)"$/, '$1'); });
   var rows = [];
   for (var i = 1; i < lines.length; i++) {
-    if (!lines[i].trim()) continue;
-    var vals = lines[i].split(sep);
+    var line = lines[i];
+    if (!line.trim()) continue;
+    // Parse respecting quoted fields
+    var vals = [], cur = '', inQ = false;
+    for (var ci = 0; ci < line.length; ci++) {
+      var ch = line[ci];
+      if (ch === '"') { inQ = !inQ; }
+      else if (ch === sep && !inQ) { vals.push(cur.trim()); cur = ''; }
+      else { cur += ch; }
+    }
+    vals.push(cur.trim());
     var obj = {};
-    headers.forEach(function(h, j) { obj[h] = (vals[j] || '').trim(); });
+    headers.forEach(function(h, j) { obj[h] = (vals[j] || '').replace(/^"(.*)"$/, '$1'); });
     rows.push(obj);
   }
   return rows;
