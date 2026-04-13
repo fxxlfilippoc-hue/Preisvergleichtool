@@ -1484,7 +1484,7 @@ function onSourceChange(source) {
         else loadMasterfeed();
       }
       populateCatFilters();
-      populateMasterfeedFilters();
+      if(typeof populateMasterfeedFilters==='function') populateMasterfeedFilters();
       stratUpdateTableBtn();
       // Auto-apply strategy if rules exist for this source
       var rules = stratData[source] || [];
@@ -3516,7 +3516,7 @@ function loadMasterfeed() {
             }
           }
         });
-          populateMasterfeedFilters();
+          if(typeof populateMasterfeedFilters==='function') populateMasterfeedFilters();
       }
       // Re-render cube with enriched names + bestand
       if (typeof allClusters !== 'undefined' && allClusters && allClusters.length) {
