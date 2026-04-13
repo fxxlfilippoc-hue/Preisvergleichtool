@@ -1012,6 +1012,18 @@
             <option value="under">Unter 97% (günstig)</option>
           </select>
         </div>
+        <div class="fg"><label>Marke</label><select id="ovBrand" onchange="cubeApplyFilters()"><option value="">Alle</option></select></div>
+        <div class="fg"><label>Cat1</label><select id="ovCat1" onchange="cubeApplyFilters()"><option value="">Alle</option></select></div>
+        <div class="fg"><label>Cat2</label><select id="ovCat2" onchange="cubeApplyFilters()"><option value="">Alle</option></select></div>
+        <div class="fg"><label>Cat3</label><select id="ovCat3" onchange="cubeApplyFilters()"><option value="">Alle</option></select></div>
+        <div class="fg"><label>Cat4</label><select id="ovCat4" onchange="cubeApplyFilters()"><option value="">Alle</option></select></div>
+        <div class="fg"><label>Geschlecht</label><select id="ovGeschlecht" onchange="cubeApplyFilters()"><option value="">Alle</option></select></div>
+        <div class="fg"><label>Radgröße</label><select id="ovRadgroesse" onchange="cubeApplyFilters()"><option value="">Alle</option></select></div>
+        <div class="fg"><label>Rahmenmaterial</label><select id="ovRahmenmaterial" onchange="cubeApplyFilters()"><option value="">Alle</option></select></div>
+        <div class="fg"><label>Rahmenform</label><select id="ovRahmenform" onchange="cubeApplyFilters()"><option value="">Alle</option></select></div>
+        <div class="fg"><label>Gänge</label><select id="ovGaenge" onchange="cubeApplyFilters()"><option value="">Alle</option></select></div>
+        <div class="fg"><label>Schaltart</label><select id="ovSchaltart" onchange="cubeApplyFilters()"><option value="">Alle</option></select></div>
+        <div class="fg"><label>Farbe</label><select id="ovFarbe" onchange="cubeApplyFilters()"><option value="">Alle</option></select></div>
         <div class="filter-actions">
           <button class="pill" onclick="cubeClearFilters()" style="height:32px;">Zurücksetzen</button>
         </div>
@@ -1433,7 +1445,91 @@ var searchTerm = '';
 // Produktdaten-Matching deaktiviert (Datei zu groß für GitHub)
 
 // ── Datenquelle wechseln ──
+function onSourceChange(source) {
+  currentSource = source;
+  // Immediately hide/show panels before fetch
+  toggleCubePanel(source === 'cube');
+  var sel = document.getElementById('sourceSelect');
+  var spinner = document.getElementById('sourceLoading');
+  var chevron = document.querySelector('.source-chevron');
+  sel.disabled = true;
+  spinner.style.display = 'block';
+  if (chevron) chevron.style.display = 'none';
+
+  fetch(API_SOURCES[source])
+    .then(function(res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.text();
+    })
+    .then(function(csvText) {
+      var parsed = parseCSV(csvText);
+      if (parsed.length === 0) throw new Error('Keine Daten gefunden');
+      updateDashboard(parsed);
+      var label = sel.options[sel.selectedIndex].text;
+      showToast(label + ': ' + parsed.length.toLocaleString('de-DE') + ' Artikel geladen');
+      toggleCubePanel(source === 'cube');
+      if(source === 'cube') {
+        if (masterfeedLoaded) {
+          cubeBuildDashboard(parsed);
+          updateCubeStratBlock();
+        } else {
+          // Load masterfeed first, then build cube dashboard
+          loadMasterfeed().then(function() {
+            cubeBuildDashboard(parsed);
+            updateCubeStratBlock();
+          });
+        }
+      } else {
+        if (masterfeedLoaded) enrichTableWithMasterfeed();
+        else loadMasterfeed();
+      }
+      populateCatFilters();
+    populateMasterfeedFilters();
+      stratUpdateTableBtn();
+      // Auto-apply strategy if rules exist for this source
+      var rules = stratData[source] || [];
+      if (rules.length > 0) {
+        var count = 0;
+        DATA.table.forEach(function(row) {
+          var z = stratCalcZielpreis(row, rules);
+          row.zielpreis = z;
+          if (z !== null) count++;
+        });
+        stratApplied[source] = true;
+        var badge = document.getElementById('stratAppliedBadge');
+        if (badge && count > 0) badge.textContent = '✓ '+count+' Zielpreise berechnet';
+      }
+    })
+    .catch(function(err) {
+      showToast('Fehler beim Laden: ' + err.message, true);
+    })
+    .finally(function() {
+      sel.disabled = false;
+      spinner.style.display = 'none';
+      if (chevron) chevron.style.display = 'block';
+    });
+}
+
 // ── CSV Parser ──
+function parseCSV(csvText) {
+  var lines = csvText.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  var firstLine = lines[0];
+  var sep = firstLine.indexOf('|') > -1 ? '|' : (firstLine.indexOf(';') > -1 ? ';' : ',');
+  var headers = splitLine(lines[0], sep).map(function(h) { return h.trim().replace(/^"|"$/g, ''); });
+  var rows = [];
+  for (var i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    var vals = splitLine(lines[i], sep);
+    var obj = {};
+    headers.forEach(function(h, idx) {
+      obj[h] = vals[idx] !== undefined ? vals[idx].trim().replace(/^"|"$/g, '') : '';
+    });
+    rows.push(obj);
+  }
+  return rows;
+}
+
 function splitLine(line, sep) {
   var result = [], cur = '', inQ = false;
   for (var i = 0; i < line.length; i++) {
@@ -1452,6 +1548,165 @@ function parseNum(val) {
 }
 
 // ── Dashboard aktualisieren ──
+function updateDashboard(rows) {
+  var total = rows.length;
+  var withComp = 0, pos1 = 0, pos2 = 0, pos3 = 0, pos4plus = 0;
+  var diffSum = 0, diffCount = 0;
+  var cheaper = 0, semiCheaper = 0, neutral = 0, semiExp = 0, expensive = 0;
+  var providerCount = {};
+  var tableRows = [];
+  var vorschlaege = 0;
+
+  rows.forEach(function(r) {
+    var sku        = (r['SKU'] || '').trim();
+    var myPrice    = parseNum(r['Mein Preis']);
+    var cheapPrice = parseNum(r['Günstigster Preis']);
+    var diff       = parseNum(r['Differenz zum günstigsten Preis']);
+    var pos        = parseInt(r['Meine Position']) || 1;
+    var provider   = (r['Günstigster Anbieter'] || '').trim();
+    var prod       = produktDB[sku] || {};
+
+    if (r['Preisvorschlag'] && r['Preisvorschlag'] !== '') vorschlaege++;
+
+    if (!isNaN(cheapPrice) && provider) {
+      withComp++;
+      providerCount[provider] = (providerCount[provider] || 0) + 1;
+      if (!isNaN(diff)) { diffSum += diff; diffCount++; }
+      if      (diff < -10) cheaper++;
+      else if (diff < 0)   semiCheaper++;
+      else if (diff === 0) neutral++;
+      else if (diff <= 50) semiExp++;
+      else                 expensive++;
+    }
+
+    if (pos === 1) pos1++;
+    else if (pos === 2) pos2++;
+    else if (pos === 3) pos3++;
+    else pos4plus++;
+
+    if (pos > 1 && !isNaN(cheapPrice)) {
+      var _uvpRaw = parseNum(r['UVP']);
+      var uvp = (!isNaN(_uvpRaw) && _uvpRaw > 0) ? _uvpRaw : parseNum(r['Standardpreis']);
+      var median     = parseNum(r['Medianpreis']);
+      var numShops   = parseInt(r['Preise']) || 0;
+      var minPreis   = parseNum(r['Mindestpreis']);
+      var maxPreis   = parseNum(r['Standardpreis']);
+      var myRabatt   = (!isNaN(uvp) && uvp > 0 && !isNaN(myPrice)) ? (uvp - myPrice) / uvp * 100 : NaN;
+      // Niedrigster = Mindestpreis oder günstigster Konkurrenzpreis
+      var niedrigster = !isNaN(minPreis) ? minPreis : cheapPrice;
+      // Höchster = Standardpreis oder UVP
+      var hoechster   = !isNaN(maxPreis) ? maxPreis : (!isNaN(uvp) ? uvp : NaN);
+      tableRows.push({
+        sku:               sku,
+        name:              r['Artikelbezeichnung'] || prod['name'] || '',
+        brand:             r['Marke'] || prod['brand'] || '',
+        warengruppe:       (r['Benutzerdefiniert'] || '').trim(),
+        my_price:          myPrice,
+        cheapest_price:    cheapPrice,
+        cheapest_provider: provider,
+        diff:              isNaN(diff) ? 0 : diff,
+        position:          pos,
+        uvp:               uvp,
+        my_rabatt:         myRabatt,
+        niedrigster:       niedrigster,
+        hoechster:         hoechster,
+        median_price:      median,
+        num_shops:         numShops,
+        preisvorschlag:    parseNum(r['Preisvorschlag'])
+      });
+    }
+  });
+
+  var top5       = Object.entries(providerCount).sort(function(a,b){return b[1]-a[1];}).slice(0,5);
+  var avgDiff    = diffCount > 0 ? diffSum / diffCount : 0;
+  var pos1pct    = total > 0 ? pos1 / total * 100 : 0;
+  var withCompPct = total > 0 ? withComp / total * 100 : 0;
+  var maxCount   = top5.length > 0 ? top5[0][1] : 1;
+
+  // KPI Cards
+  var cards = document.querySelectorAll('.kpi-card');
+  cards[0].querySelector('.kpi-value').textContent = total.toLocaleString('de-DE');
+  cards[1].querySelector('.kpi-value').textContent = withComp.toLocaleString('de-DE');
+  cards[1].querySelector('.kpi-sub').textContent   = withCompPct.toFixed(1) + ' % aller Artikel';
+  cards[2].querySelector('.kpi-value').textContent = pos1pct.toFixed(1) + ' %';
+  cards[2].querySelector('.kpi-sub').textContent   = pos1.toLocaleString('de-DE') + ' von ' + total.toLocaleString('de-DE');
+  cards[3].querySelector('.kpi-value').textContent = (avgDiff >= 0 ? '+' : '') + avgDiff.toFixed(2) + ' €';
+  cards[4].querySelector('.kpi-value').textContent = vorschlaege.toLocaleString('de-DE');
+
+  // Preisgruppen Donut
+  if (window.donutChartInst) {
+    window.donutChartInst.data.datasets[0].data = [cheaper, semiCheaper, neutral, semiExp, expensive];
+    window.donutChartInst.update();
+  }
+  document.querySelector('.donut-center .big').textContent = withComp.toLocaleString('de-DE');
+  var wc = withComp || 1;
+  var pgPcts = document.querySelectorAll('.pg-pct');
+  [cheaper, semiCheaper, neutral, semiExp, expensive].forEach(function(v, i) {
+    if (pgPcts[i]) pgPcts[i].textContent = (v / wc * 100).toFixed(1) + ' %';
+  });
+
+  // Top-Anbieter Balken dynamisch
+  var compArea = document.querySelector('.comp-chart-area');
+  compArea.innerHTML = top5.map(function(item) {
+    var name = item[0], count = item[1];
+    var pct  = (count / maxCount * 100).toFixed(1);
+    var diffs = rows
+      .filter(function(r) { return (r['Günstigster Anbieter'] || '').trim() === name; })
+      .map(function(r) { return parseNum(r['Differenz zum günstigsten Preis']); })
+      .filter(function(v) { return !isNaN(v); });
+    var avgD = diffs.length > 0 ? diffs.reduce(function(a,b){return a+b;},0) / diffs.length : 0;
+    var badgeClass = avgD < 0 ? 'badge-green' : (avgD > 20 ? 'badge-red' : 'badge-neutral');
+    var sign = avgD > 0 ? '+' : '';
+    return '<div class="comp-bar-row">' +
+      '<div class="comp-name">' + name + '</div>' +
+      '<div class="comp-bar-track"><div class="comp-bar-fill" style="width:' + pct + '%"></div></div>' +
+      '<div class="comp-matches">' + count.toLocaleString('de-DE') + '</div>' +
+      '<div class="comp-diff-badge ' + badgeClass + '">' + sign + avgD.toFixed(2) + ' \u20ac</div>' +
+      '</div>';
+  }).join('');
+
+  // Günstigster Anbieter Chart
+  var labels    = top5.map(function(x) { return x[0].replace('.de','').replace('.com (DE)','').replace('.com',''); });
+  var chartData = top5.map(function(x) { return x[1]; });
+  var colors    = ['#378ADD','#5DCAA5','#E24B4A','#EF9F27','#7F77DD'];
+  if (window.cheapestChartInst) {
+    window.cheapestChartInst.data.labels = labels;
+    window.cheapestChartInst.data.datasets[0].data = chartData;
+    window.cheapestChartInst.data.datasets[0].backgroundColor = colors.slice(0, top5.length);
+    window.cheapestChartInst.update();
+  }
+
+  // Positions Donut
+  if (window.positionChartInst) {
+    window.positionChartInst.data.datasets[0].data = [pos1, pos2, pos3, pos4plus];
+    window.positionChartInst.update();
+  }
+  var posNums = document.querySelectorAll('.pos-num');
+  if (posNums[0]) posNums[0].textContent = pos1.toLocaleString('de-DE');
+  if (posNums[1]) posNums[1].textContent = pos2.toLocaleString('de-DE');
+  if (posNums[2]) posNums[2].textContent = pos3.toLocaleString('de-DE');
+  if (posNums[3]) posNums[3].textContent = pos4plus.toLocaleString('de-DE');
+
+  // Filter Pills dynamisch neu aufbauen
+  var pills = document.getElementById('filterPills');
+  pills.innerHTML = '<button class="pill active" data-filter="all" onclick="filterTable(this,\'all\')">Alle</button>';
+  top5.forEach(function(item) {
+    var name  = item[0];
+    var label = name.replace('.de','').replace(' (DE)','').replace('.com','');
+    var btn   = document.createElement('button');
+    btn.className = 'pill';
+    btn.setAttribute('data-filter', name);
+    btn.textContent = label;
+    btn.onclick = function() { filterTable(btn, name); };
+    pills.appendChild(btn);
+  });
+
+  DATA.table = tableRows;
+  currentPage = 1;
+  currentFilter = 'all';
+  renderTable();
+}
+
 // ── Tabelle rendern ──
 var normalShop = '';
 var normalPos  = '';
@@ -1521,6 +1776,93 @@ function getFilteredData() {
     }
     return true;
   });
+}
+
+function renderTable() {
+  var filtered = getFilteredData();
+  var total    = filtered.length;
+  var start    = (currentPage - 1) * pageSize;
+  var rows     = filtered.slice(start, start + pageSize);
+
+  document.getElementById('row-count').textContent = total.toLocaleString('de-DE') + ' Artikel';
+  renderNormalKPIs(filtered);
+  document.getElementById('page-info').textContent = 'Zeige ' + (start+1) + '\u2013' + Math.min(start+pageSize, total) + ' von ' + total.toLocaleString('de-DE');
+
+  var tbody = document.getElementById('tableBody');
+  tbody.innerHTML = rows.map(function(r) {
+    var td   = 'padding:7px 12px;vertical-align:middle;border-bottom:0.5px solid #e8e6e0;font-size:13px;color:#1A1A18;';
+    var mono = td + 'font-family:monospace;';
+    var seasonMatch = (r.name||'').match(/\b(20\d{2})\b/);
+    var season = seasonMatch ? seasonMatch[1] : (/aktion/i.test(r.name||'') ? 'Aktion' : '');
+    var niedrig   = !isNaN(r.niedrigster) && r.niedrigster > 0 ? r.niedrigster : r.cheapest_price;
+    var idx       = (!isNaN(r.my_price) && !isNaN(niedrig) && niedrig > 0) ? r.my_price / niedrig * 100 : null;
+    var idxColor  = idx===null ? '#888' : idx>105 ? '#c0392b' : idx<97 ? '#1a7a3f' : '#1A1A18';
+    var posBg     = r.position===2 ? '#FFFBEB' : r.position===3 ? '#FDEAEA' : '#F3F4F6';
+    var posClr    = r.position===2 ? '#92400E' : r.position===3 ? '#B91C1C' : '#4B5563';
+    // Mein Rabatt = (UVP - Mein Preis) / UVP
+    var myRab     = (!isNaN(r.uvp) && r.uvp > 0 && !isNaN(r.my_price)) ? (r.uvp - r.my_price) / r.uvp * 100 : null;
+    var rabStr    = myRab !== null ? '-' + myRab.toFixed(1) + '%' : '-0,0%';
+    var uvpStr    = !isNaN(r.uvp) && r.uvp > 0 ? r.uvp.toFixed(2) + ' €' : '—';
+    var niedrigStr= !isNaN(niedrig) ? niedrig.toFixed(2) + ' €' : '—';
+    var hoechStr  = !isNaN(r.hoechster) ? r.hoechster.toFixed(2) + ' €' : '—';
+    // Zielpreis
+    var hasZiel   = r.zielpreis !== undefined && r.zielpreis !== null;
+    var zielStr   = hasZiel ? r.zielpreis.toFixed(2) + ' €' : '—';
+    var zielClr   = hasZiel ? (r.zielpreis < r.my_price ? '#1a7a3f' : r.zielpreis > r.my_price ? '#c0392b' : '#1A1A18') : '#ccc';
+    // Rabatt (Ziel) = (UVP - Zielpreis) / UVP
+    var rabZielStr= (hasZiel && !isNaN(r.uvp) && r.uvp > 0) ? '-' + ((r.uvp - r.zielpreis) / r.uvp * 100).toFixed(1) + '%' : '—';
+    // Potenzial = Zielpreis - Mein Preis
+    var pot       = hasZiel ? r.zielpreis - r.my_price : null;
+    var potStr    = pot !== null ? (pot >= 0 ? '+' : '') + pot.toFixed(2) + ' €' : '—';
+    var potClr    = pot === null ? '#ccc' : pot < 0 ? '#c0392b' : '#1a7a3f';
+    // Shops
+    var shopsStr  = r.num_shops > 0 ? r.num_shops + ' Shops' : (r.cheapest_provider ? '1 Shop' : '—');
+    return '<tr style="background:#fff;">' +
+      '<td style="'+td+'max-width:200px;">' +
+        '<div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+r.name+'">'+r.name+'</div>' +
+        '<div style="font-size:11px;color:#888;">'+(r.brand||'')+'</div>' +
+      '</td>' +
+      '<td style="'+td+'text-align:center;">' +
+        (season ? '<span style="background:#EBF3FC;color:#185FA5;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;">'+season+'</span>' : '<span style="color:#ccc;">—</span>') +
+      '</td>' +
+      '<td style="'+mono+'font-weight:600;">'+(isNaN(r.my_price)?'—':r.my_price.toFixed(2)+' €')+'</td>' +
+      '<td style="'+mono+'color:#888;">'+rabStr+'</td>' +
+      '<td style="'+mono+'color:#888;">—</td>' +
+      '<td style="'+td+'">' +
+        '<div style="font-weight:700;color:#c0392b;font-family:monospace;">'+niedrigStr+'</div>' +
+        '<div style="font-size:11px;color:#888;">'+(r.cheapest_provider||'')+'</div>' +
+      '</td>' +
+      '<td style="'+mono+'color:#888;">'+hoechStr+'</td>' +
+      '<td style="'+mono+'font-weight:700;color:'+idxColor+';">'+(idx!==null?idx.toFixed(1)+'%':'—')+'</td>' +
+      '<td style="'+mono+'font-weight:600;color:'+zielClr+';">'+zielStr+'</td>' +
+      '<td style="'+mono+'color:#888;">'+rabZielStr+'</td>' +
+      '<td style="'+mono+'font-weight:600;color:'+potClr+';">'+potStr+'</td>' +
+      '<td style="'+td+'color:#ccc;">—</td>' +
+      '<td style="'+td+'color:#ccc;">—</td>' +
+      '<td style="'+mono+'color:#888;">'+uvpStr+'</td>' +
+      (function(){
+        var q = r.qty;
+        if (q === undefined || q === null) return '<td style="'+td+'color:#ccc;">—</td>';
+        var qClr = q === 0 ? '#c0392b' : q < 5 ? '#92400E' : '#1a7a3f';
+        return '<td style="'+td+'font-weight:600;color:'+qClr+';">'+q+'</td>';
+      })() +
+      '<td style="'+td+'">' +
+        '<div style="font-weight:600;color:#185FA5;font-size:12px;">'+(r.cheapest_provider||'—')+'</div>' +
+        '<div style="font-size:11px;color:#888;">'+shopsStr+'</div>' +
+      '</td>' +
+      '</tr>';
+  }).join('');
+
+  var totalPages = Math.ceil(total / pageSize);
+  var btns = document.getElementById('pageBtns');
+  btns.innerHTML = '';
+  for (var i = 1; i <= Math.min(totalPages, 8); i++) {
+    var b = document.createElement('button');
+    b.className = 'page-btn' + (i === currentPage ? ' active' : '');
+    b.textContent = i;
+    (function(page) { b.onclick = function() { currentPage = page; renderTable(); }; })(i);
+    btns.appendChild(b);
+  }
 }
 
 function filterTable(el, filter) {
@@ -1596,6 +1938,25 @@ function showToast(msg, isError) {
 
 // ── Passwort & Laden ──
 var PW = 'Einkauf2026Dashboard';
+
+function checkPw() {
+  var val = document.getElementById('pwInput').value;
+  if (val === PW) {
+    sessionStorage.setItem('px_auth', '1');
+    document.getElementById('pwOverlay').style.display = 'none';
+    setTimeout(function() {
+      ['cube','fahrraeder','zubehoer'].forEach(function(src) { supaLoadStrat(src, false); });
+      stratUpdateTableBtn();
+    }, 100);
+  } else {
+    var inp = document.getElementById('pwInput');
+    var err = document.getElementById('pwError');
+    err.textContent = 'Falsches Passwort';
+    inp.classList.add('shake');
+    inp.value = '';
+    setTimeout(function() { inp.classList.remove('shake'); err.textContent = ''; }, 1000);
+  }
+}
 
 window.onerror = function(msg, src, line, col, err) {
   var d = document.createElement('div');
@@ -1736,13 +2097,6 @@ function settingsNav(btn, panel) {
   });
   var target = document.getElementById('settings-' + panel);
   if (target) target.style.display = 'block';
-  // Sync threshold inputs
-  if (panel === 'statusdefs') {
-    var ki = document.getElementById('thresh_kritisch');
-    var mi = document.getElementById('thresh_marge');
-    if (ki) ki.value = statusThresholds.kritisch;
-    if (mi) mi.value = statusThresholds.marge;
-  }
 }
 
 function stratApplyFromTable() {
@@ -1879,6 +2233,120 @@ function cubeExtractProductName(label){
   return name.trim();
 }
 
+function cubeBuildDashboard(data){
+  if(!data||!data.length) return;
+  debugIssues=[];
+  var keys=Object.keys(data[0]);
+  var colArtikel   = cubeFindCol(keys,[/artikelbezeichnung/i,/artikel/i,/produktname/i]);
+  var colMeinPreis = cubeFindCol(keys,[/mein.?preis/i]);
+  var colUVP       = cubeFindCol(keys,[/^uvp$/i]);
+  var colSKU       = cubeFindCol(keys,[/^sku$/i]);
+  var colMinPreis  = cubeFindCol(keys,[/günstigster.?preis/i,/min.?preis/i]);
+  var colShop      = cubeFindCol(keys,[/günstigster.?anbieter/i]);
+  var colPreisvor  = cubeFindCol(keys,[/preisvorschlag$/i]);
+  var colBenutzerd = cubeFindCol(keys,[/benutzerdefiniert/i]);
+
+  var clusterMap = {};
+
+  data.forEach(function(r){
+    var label    = (r[colArtikel]||'').trim();
+    var pName    = cubeExtractProductName(label);   // Farbe + "Modell" entfernt
+    var season   = cubeExtractSeason(label);
+    var key      = pName + '||' + season;
+    var shop     = (r[colShop]||'').trim();
+    var sku      = colSKU ? (r[colSKU]||'').trim() : '';
+    var benutzerd= colBenutzerd ? (r[colBenutzerd]||'').trim() : '';
+
+    if(!clusterMap[key]) clusterMap[key]={
+      key:key, name:pName, season:season,
+      myPrice:null, uvp:null,
+      skus:[], modellnummern:[], seenSkus:{},
+      marketPrices:[], shops:[],
+      preisvorschlag:null, distAbs:null, priceIndex:null,
+      totalQty:0
+    };
+    var c = clusterMap[key];
+
+    var mp  = cubeParsePrice(r[colMeinPreis]);
+    var uvp = cubeParsePrice(r[colUVP]);
+    var minp= cubeParsePrice(r[colMinPreis]);
+    var pv  = colPreisvor ? cubeParsePrice(r[colPreisvor]) : null;
+
+    // Take highest Mein Preis across SKUs (same product, different sizes)
+    if(mp!==null && (c.myPrice===null || mp > c.myPrice)) c.myPrice = mp;
+    if(uvp!==null && !c.uvp) c.uvp = uvp;
+    if(pv!==null) c.preisvorschlag = pv;
+
+    // Track unique SKUs + Modellnummern
+    if(sku && !c.seenSkus[sku]){
+      c.seenSkus[sku] = true;
+      c.skus.push(sku);
+      // Add qty from masterfeed
+      if (masterfeedLoaded && masterfeedData[sku.toUpperCase()] !== undefined) {
+        c.totalQty += (masterfeedData[sku.toUpperCase()].qty || 0);
+      }
+    }
+    if(benutzerd && c.modellnummern.indexOf(benutzerd)<0) c.modellnummern.push(benutzerd);
+
+    // Market prices from competitor
+    if(minp!==null){
+      c.marketPrices.push({price:minp, shop:shop});
+      if(shop && c.shops.indexOf(shop)<0) c.shops.push(shop);
+    }
+  });
+
+  allClusters = Object.values(clusterMap).map(function(c){
+    var prices = c.marketPrices.map(function(m){return m.price;}).sort(function(a,b){return a-b;});
+    var minPrice  = prices.length ? prices[0] : null;
+    var maxPrice  = prices.length ? prices[prices.length-1] : null;
+    var avgMarket = prices.length ? prices.reduce(function(a,b){return a+b;},0)/prices.length : null;
+    var cheapestEntry = c.marketPrices.slice().sort(function(a,b){return a.price-b.price;})[0];
+    var cheapestShop  = cheapestEntry ? cheapestEntry.shop : '';
+    var myPrice = c.myPrice, uvp = c.uvp;
+    var priceIndex = (myPrice&&avgMarket) ? myPrice/avgMarket*100 : null;
+    var distAbs    = (myPrice!==null&&minPrice!==null) ? myPrice-minPrice : null;
+    var currentDiscount = (myPrice&&uvp) ? (uvp-myPrice)/uvp*100 : null;
+    var minAllowed = uvp ? uvp*0.70 : null;
+    var calc = cubeCalcCluster(
+      {myPrice:myPrice, minPrice:minPrice, avgMarket:avgMarket, priceIndex:priceIndex},
+      minAllowed, uvp
+    );
+    return {
+      key:c.key, name:c.name, season:c.season, uvp:uvp, myPrice:myPrice,
+      skus:c.skus, modellnummern:c.modellnummern,
+      cheapestShop:cheapestShop, shops:c.shops,
+      prices:prices, minPrice:minPrice, maxPrice:maxPrice, avgMarket:avgMarket,
+      priceIndex:priceIndex, distAbs:distAbs, currentDiscount:currentDiscount,
+      preisvorschlag:c.preisvorschlag, minAllowed:minAllowed,
+      targetPrice:calc.targetPrice, newDiscount:calc.newDiscount,
+      potential:calc.potential, status:calc.status, action:calc.action, ncFlag:calc.ncFlag
+    };
+  });
+
+  // Season Dropdown
+  var seasons = allClusters.map(function(c){return c.season;}).filter(function(v,i,a){return a.indexOf(v)===i;}).sort();
+  var ovSeason = document.getElementById('ovSeason');
+  ovSeason.innerHTML = '<option value="">Alle</option>';
+  seasons.forEach(function(s){
+    var o = document.createElement('option');
+    o.value = s; o.textContent = s==='Aktion' ? '⚡ Aktion' : s;
+    ovSeason.appendChild(o);
+  });
+
+  // Shop Dropdown (günstigster)
+  var shops = allClusters.map(function(c){return c.cheapestShop;}).filter(function(v){return !!v;});
+  shops = shops.filter(function(v,i,a){return a.indexOf(v)===i;}).sort();
+  var ovShop = document.getElementById('ovShop');
+  ovShop.innerHTML = '<option value="">Alle</option>';
+  shops.forEach(function(s){
+    var o = document.createElement('option');
+    o.value = s; o.textContent = s;
+    ovShop.appendChild(o);
+  });
+
+  cubeApplyFilters();
+}
+
 function cubeApplyFilters(){
   var search  = (document.getElementById('ovSearch').value||'').toLowerCase();
   var season  = document.getElementById('ovSeason').value;
@@ -1924,6 +2392,18 @@ function cubeApplyFilters(){
     if(search && c.name.toLowerCase().indexOf(search)<0) return false;
     if(season && c.season!==season) return false;
     if(shop   && c.cheapestShop!==shop) return false;
+    if(brand  && c.mfBrand!==brand) return false;
+    if(cat1   && c.mfCat1!==cat1) return false;
+    if(cat2   && c.mfCat2!==cat2) return false;
+    if(cat3   && c.mfCat3!==cat3) return false;
+    if(cat4   && c.mfCat4!==cat4) return false;
+    if(gesch  && c.mfGeschlecht!==gesch) return false;
+    if(rad    && c.mfRadgroesse!==rad) return false;
+    if(rahmat && c.mfRahmenmaterial!==rahmat) return false;
+    if(rahform&& c.mfRahmenform!==rahform) return false;
+    if(gaenge && c.mfGaenge!==gaenge) return false;
+    if(schalt && c.mfSchaltart!==schalt) return false;
+    if(farbe  && c.mfFarbe!==farbe) return false;
     if(idxFilt==='over'  && (c.priceIndex===null||c.priceIndex<=105)) return false;
     if(idxFilt==='under' && (c.priceIndex===null||c.priceIndex>=97))  return false;
     if(idxFilt==='ok'    && (c.priceIndex===null||c.priceIndex<97||c.priceIndex>105)) return false;
@@ -2028,6 +2508,16 @@ function cubeRenderKPIs(src){
     if(k.filter){(function(f){div.onclick=function(){cubeSetFilter('status',f);};})(k.filter);}
     kpiEl.appendChild(div);
   });
+  // Bestand-KPI
+  var totalStock = src.reduce(function(sum,c){return sum+(c.totalQty||0);},0);
+  var stockColor = totalStock > 0 ? 'var(--green)' : 'var(--muted)';
+  var stockDiv = document.createElement('div');
+  stockDiv.className = 'cube-kpi no-click';
+  stockDiv.innerHTML = '<div class="kpi-label">Gesamtbestand</div>'
+    + '<div class="kpi-value" style="color:'+stockColor+';font-size:20px;">'
+    + totalStock.toLocaleString('de-DE') + '</div>'
+    + '<div class="kpi-sub">Stück (gefiltert)</div>';
+  kpiEl.appendChild(stockDiv);
 }
 
 function cubeSetFilter(key, val){
@@ -2180,7 +2670,7 @@ function cubeRenderTable(src){
         // Bestand cell
         var qty = 0;
         if (masterfeedLoaded && c.skus) {
-          c.skus.forEach(function(s){ if(masterfeedData[s.toUpperCase()]) qty += (masterfeedData[s.toUpperCase()].qty||0); });
+          c.skus.forEach(function(s){ var su=s.toUpperCase(); if(masterfeedData[su]) qty += (masterfeedData[su].qty||0); });
         }
         var td3 = 'padding:7px 12px;vertical-align:middle;border-bottom:0.5px solid #e8e6e0;font-size:13px;';
         if (!masterfeedLoaded) return '<td style="'+td3+'color:#ccc;">—</td>';
@@ -2189,7 +2679,7 @@ function cubeRenderTable(src){
       })() +
       (function(){
         var shopCount = c.shops ? c.shops.length : 0;
-        var rowId = 'sr' + (++window._srIdx);
+        var rowId = 'sr_' + c.key.replace(/\W/g,'_').substring(0,30);
         var shopPrices = {};
         if (c.marketPrices) {
           c.marketPrices.forEach(function(mp) {
@@ -2199,22 +2689,23 @@ function cubeRenderTable(src){
         }
         var shopKeys = Object.keys(shopPrices).sort(function(a,b){ return shopPrices[a]-shopPrices[b]; });
         var hasMore = shopKeys.length > 1;
+        var toggleBtn = hasMore ? '<span data-sr="' + rowId + '" onclick="cubeToggleShops(this)" style="cursor:pointer;font-size:10px;color:#185FA5;margin-left:6px;">▼ alle</span>' : '';
+        var shopList = '<div id="' + rowId + '" style="display:none;margin-top:5px;border-top:0.5px solid #eee;padding-top:4px;">'
+          + shopKeys.map(function(sh) {
+              var isCh = sh === c.cheapestShop;
+              return '<div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;padding:2px 0;">'
+                + '<span style="color:' + (isCh ? '#c0392b' : '#555') + ';">' + sh + '</span>'
+                + '<span style="font-family:monospace;font-weight:' + (isCh ? '700' : '400') + ';">' + shopPrices[sh].toFixed(2) + ' €</span>'
+                + '</div>';
+            }).join('')
+          + '</div>';
         var td2 = 'padding:7px 12px;vertical-align:top;border-bottom:0.5px solid #e8e6e0;font-size:13px;';
-        var shopListHtml = shopKeys.map(function(sh) {
-          var isCh = sh === c.cheapestShop;
-          return '<div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;padding:2px 0;">'
-            + '<span style="color:' + (isCh ? '#c0392b' : '#555') + ';">' + sh + '</span>'
-            + '<span style="font-family:monospace;font-weight:' + (isCh ? '700' : '400') + ';">' + shopPrices[sh].toFixed(2) + ' €</span>'
-            + '</div>';
-        }).join('');
         return '<td style="' + td2 + '">'
-          + '<div style="font-weight:600;color:#185FA5;font-size:12px;">' + (c.cheapestShop || '—')
-          + (hasMore ? ' <span class="shop-toggle" data-rid="' + rowId + '" style="cursor:pointer;font-size:10px;color:#185FA5;">▼ alle</span>' : '')
-          + '</div>'
+          + '<div style="font-weight:600;color:#185FA5;font-size:12px;">' + (c.cheapestShop || '—') + toggleBtn + '</div>'
           + '<div style="font-size:11px;color:#888;">' + shopCount + ' Shop' + (shopCount !== 1 ? 's' : '') + '</div>'
-          + (hasMore ? '<div id="' + rowId + '" style="display:none;margin-top:5px;border-top:0.5px solid #eee;padding-top:4px;">' + shopListHtml + '</div>' : '')
+          + (hasMore ? shopList : '')
           + '</td>';
-      })()+
+      })() +
       '</tr>';
   }).join('');
 
@@ -2231,98 +2722,566 @@ function cubeRenderTable(src){
   }
 }
 
+function cubeSortBy(col){
+  if(cubeSortCol===col) cubeSortDir*=-1;
+  else{cubeSortCol=col;cubeSortDir=1;}
+  cubeRenderTable(filteredClusters);
+}
 
+function cubeDownloadCSV(){
+  var rows=[['Produkt','Season','Mein Preis','UVP','Niedrigster','Ø Markt','Index %','Zielpreis','Potenzial','Status','Empfehlung','Shops']];
+  filteredClusters.forEach(function(c){
+    rows.push([c.name,c.season,c.myPrice||'',c.uvp||'',c.minPrice||'',c.avgMarket?c.avgMarket.toFixed(2):'',c.priceIndex?c.priceIndex.toFixed(1):'',c.targetPrice||'',c.potential?c.potential.toFixed(2):'',c.status,c.action,c.shops.join(';')]);
+  });
+  var csv=rows.map(function(r){return r.map(function(v){return'"'+String(v||'').replace(/"/g,'""')+'"';}).join(';');}).join('\n');
+  var a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
+  a.download='cube_preisanalyse.csv';
+  a.click();
+}
 
-
-
-// ── Eingebettete Demo-Daten (werden beim ersten Laden ersetzt) ──
-var DATA = {"total":2892,"with_comp":2257,"avg_diff":28.66,"position_1_pct":88.8,"price_groups":{"cheaper":{"count":110,"pct":4.9},"semi_cheaper":{"count":11,"pct":0.5},"neutral":{"count":1812,"pct":80.3},"semi_expensive":{"count":29,"pct":1.3},"expensive":{"count":295,"pct":13.1}},"competitors":[{"name":"lucky-bike.de","matches":1585,"cheapest":784,"avg_diff":-5.64},{"name":"fahrrad.de","matches":1004,"cheapest":708,"avg_diff":0.97},{"name":"bike-discount.de","matches":1412,"cheapest":454,"avg_diff":77.5},{"name":"multicycle.de","matches":375,"cheapest":213,"avg_diff":198.79},{"name":"rabe-bike.de","matches":970,"cheapest":98,"avg_diff":-92.9}],"positions":{"1":2568,"2":269,"3":53,"4+":2},"table":[]};
-
-// ── GitHub Quellen ──
-var GITHUB_BASE = 'https://raw.githubusercontent.com/fxxlfilippoc-hue/Preisvergleichtool/main/';
-var API_SOURCES = {
-  cube:       GITHUB_BASE + 'shoptracker_cube.csv',
-  fahrraeder: GITHUB_BASE + 'shoptracker_fahrraeder.csv',
-  zubehoer:   GITHUB_BASE + 'shoptracker_zubehoer.csv'
-};
-
-
-var currentSource = 'cube';
-var produktDB = {};
-var currentPage = 1;
-var pageSize = 25;
-var currentFilter = 'all';
-var searchTerm = '';
-
-// Produktdaten-Matching deaktiviert (Datei zu groß für GitHub)
-
-// ── Datenquelle wechseln ──
-function onSourceChange(source) {
-  currentSource = source;
-  // Immediately hide/show panels before fetch
-  toggleCubePanel(source === 'cube');
-  var sel = document.getElementById('sourceSelect');
-  var spinner = document.getElementById('sourceLoading');
-  var chevron = document.querySelector('.source-chevron');
-  sel.disabled = true;
-  spinner.style.display = 'block';
-  if (chevron) chevron.style.display = 'none';
-
-  fetch(API_SOURCES[source])
-    .then(function(res) {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return res.text();
-    })
-    .then(function(csvText) {
-      var parsed = parseCSV(csvText);
-      if (parsed.length === 0) throw new Error('Keine Daten gefunden');
-      updateDashboard(parsed);
-      var label = sel.options[sel.selectedIndex].text;
-      showToast(label + ': ' + parsed.length.toLocaleString('de-DE') + ' Artikel geladen');
-      toggleCubePanel(source === 'cube');
-      if(source === 'cube') {
-        if (masterfeedLoaded) {
-          cubeBuildDashboard(parsed);
-          updateCubeStratBlock();
-        } else {
-          // Load masterfeed first, then build cube dashboard
-          loadMasterfeed().then(function() {
-            cubeBuildDashboard(parsed);
-            updateCubeStratBlock();
-          });
-        }
-      } else {
-        if (masterfeedLoaded) enrichTableWithMasterfeed();
-        else loadMasterfeed();
-      }
-      populateCatFilters();
-      stratUpdateTableBtn();
-      // Auto-apply strategy if rules exist for this source
-      var rules = stratData[source] || [];
-      if (rules.length > 0) {
-        var count = 0;
-        DATA.table.forEach(function(row) {
-          var z = stratCalcZielpreis(row, rules);
-          row.zielpreis = z;
-          if (z !== null) count++;
-        });
-        stratApplied[source] = true;
-        var badge = document.getElementById('stratAppliedBadge');
-        if (badge && count > 0) badge.textContent = '✓ '+count+' Zielpreise berechnet';
-      }
-    })
-    .catch(function(err) {
-      showToast('Fehler beim Laden: ' + err.message, true);
-    })
-    .finally(function() {
-      sel.disabled = false;
-      spinner.style.display = 'none';
-      if (chevron) chevron.style.display = 'block';
-    });
+// ── Toggle: Preisanpassungen zeigt Cube oder Normal ──
+function toggleCubePanel(isCube){
+  var normalPreis  = document.getElementById('normal-preis-panel');
+  var cubePanel    = document.getElementById('cube-panel');
+  var cubeExtra    = document.getElementById('cubeExtraPanel');
+  if(isCube){
+    if(normalPreis) normalPreis.style.display = 'none';
+    if(cubePanel)   cubePanel.style.display   = 'block';
+    if(cubeExtra)   cubeExtra.style.display   = 'block';
+  } else {
+    if(normalPreis) normalPreis.style.display = 'block';
+    if(cubePanel)   cubePanel.style.display   = 'none';
+    if(cubeExtra)   cubeExtra.style.display   = 'none';
+  }
 }
 
 
+// ══════════════════════════════════════════
+// PREISSTRATEGIE ENGINE
+// ══════════════════════════════════════════
 
+var stratData = { cube: [], fahrraeder: [], zubehoer: [] };
+var stratCurrentSrc = 'cube';
+var stratApplied = { cube: false, fahrraeder: false, zubehoer: false };
+
+// ── Strategien aus localStorage laden ──
+(function() {
+  try {
+    var saved = localStorage.getItem('fxxl_stratData');
+    if (saved) {
+      var parsed = JSON.parse(saved);
+      if (parsed.cube)       stratData.cube       = parsed.cube;
+      if (parsed.fahrraeder) stratData.fahrraeder = parsed.fahrraeder;
+      if (parsed.zubehoer)   stratData.zubehoer   = parsed.zubehoer;
+    }
+  } catch(e) { console.warn('Strategie-Daten konnten nicht geladen werden:', e); }
+})();
+
+function stratSave() {
+  try {
+    localStorage.setItem('fxxl_stratData', JSON.stringify(stratData));
+  } catch(e) { console.warn('Speichern fehlgeschlagen:', e); }
+}
+var stratCurrentPrio = 1;
+var stratCurrentType = 'markt_minus_x';
+
+var stratHints = {
+  markt_minus_x:       'Zielpreis = Günstigster − x € (gerundet auf .99, nie unter Max. Rabatt auf UVP)',
+  markt_minus_pct:     'Zielpreis = Günstigster × (1 − x/100) (gerundet auf .99)',
+  günstigster_plus_x:  'Zielpreis = Günstigster + x € — nie über UVP',
+  günstigster_plus_pct:'Zielpreis = Günstigster × (1 + x/100) — nie über UVP',
+  uvp_minus_rabatt:    'Zielpreis = UVP × (1 − x/100) — gut als Catchall-Regel P1',
+  zielposition:        'Platz 1 → Günstigster − 10 €  |  Platz 2+ → gleicher Preis wie Günstigster',
+  min_max:             'Min = niedrigster erlaubter Zielpreis (z.B. 30% Rabatt = UVP×0,70). Max = höchster erlaubter Zielpreis (z.B. 20% Rabatt = UVP×0,80). Zielpreis folgt dem Markt innerhalb dieses Korridors.'
+};
+var stratWertLabels = {
+  markt_minus_x:'Wert (€)', markt_minus_pct:'Wert (%)',
+  günstigster_plus_x:'Wert (€)', günstigster_plus_pct:'Wert (%)',
+  uvp_minus_rabatt:'Rabatt (%)', zielposition:'Platz #', min_max:''
+};
+
+function stratSelectSource(btn, src) {
+  document.querySelectorAll('.strat-src-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  stratCurrentSrc = src;
+  // Sync main dropdown
+  var sel = document.getElementById('sourceSelect');
+  if (sel) { sel.value = src; onSourceChange(src); }
+  // Auto-load from Supabase
+  supaLoadStrat(src, false);
+}
+
+function stratSetPrio(btn, prio) {
+  document.querySelectorAll('.prio-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  stratCurrentPrio = prio;
+}
+
+function stratSetType(btn, type) {
+  document.querySelectorAll('.strat-type-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  stratCurrentType = type;
+  // Show/hide fields
+  var isMinMax = type === 'min_max';
+  var wf = document.getElementById('wertField');
+  var mf = document.getElementById('minPctField');
+  var xf = document.getElementById('maxPctField');
+  var rf = document.getElementById('maxRabattField');
+  var lbl = document.getElementById('newWertLabel');
+  var hint = document.getElementById('stratHint');
+  if (wf)  wf.style.display  = isMinMax ? 'none' : 'flex';
+  if (mf)  mf.style.display  = isMinMax ? 'flex' : 'none';
+  if (xf)  xf.style.display  = isMinMax ? 'flex' : 'none';
+  if (rf)  rf.style.display  = isMinMax ? 'none' : 'flex';
+  if (lbl) lbl.textContent   = stratWertLabels[type] || 'Wert';
+  if (hint) hint.textContent = stratHints[type] || '';
+}
+
+function stratSrcLabel(src) {
+  return src==='cube'?'Cube Fahrrad':src==='fahrraeder'?'Fahrräder':'Zubehör';
+}
+
+function stratAddRule() {
+  var season = document.getElementById('newSeason').value || 'alle';
+  var marke  = (document.getElementById('newMarke').value||'alle').trim();
+  var wg     = (document.getElementById('newWarengruppe').value||'').trim();
+  var strat  = stratCurrentType;
+  var wert   = parseFloat(document.getElementById('newWert') ? document.getElementById('newWert').value : '0') || 0;
+  var minPct = parseFloat(document.getElementById('newMinPct') ? document.getElementById('newMinPct').value : '20') || 20;
+  var maxPct = parseFloat(document.getElementById('newMaxPct') ? document.getElementById('newMaxPct').value : '35') || 35;
+  var maxRab = parseFloat(document.getElementById('newMaxRabatt') ? document.getElementById('newMaxRabatt').value : '30') || 30;
+
+  var rule = {
+    prioritaet: stratCurrentPrio,
+    season: season, marke: marke, warengruppe: wg,
+    strategie: strat, wert: wert,
+    min_pct: minPct, max_pct: maxPct,
+    max_rabatt_pct: maxRab, aktiv: true
+  };
+  stratData[stratCurrentSrc].push(rule);
+  stratData[stratCurrentSrc].sort(function(a,b){ return b.prioritaet-a.prioritaet; });
+  stratApplied[stratCurrentSrc] = false;
+  stratSave();
+  stratRenderTable();
+  stratShowBanner('Regel hinzugefügt — klick auf "Strategie anwenden" um Zielpreise zu berechnen.', 'info');
+}
+
+function stratDeleteRule(idx) {
+  var rules = stratData[stratCurrentSrc];
+  if (!rules || idx < 0 || idx >= rules.length) return;
+  rules.splice(idx, 1);
+  stratData[stratCurrentSrc] = rules;
+  stratApplied[stratCurrentSrc] = false;
+  stratSave();
+  stratRenderTable();
+  stratShowBanner('Regel gelöscht.', 'info');
+}
+
+function stratToggleRule(idx) {
+  var rules = stratData[stratCurrentSrc];
+  if (rules[idx]) { rules[idx].aktiv = !rules[idx].aktiv; stratApplied[stratCurrentSrc]=false; stratSave(); stratRenderTable(); }
+}
+
+function stratRenderTable() {
+  var rules = stratData[stratCurrentSrc];
+  var tbody = document.getElementById('stratTableBody');
+  var cntEl = document.getElementById('stratRuleCount');
+  if (!tbody) return;
+  if (!rules||!rules.length) {
+    tbody.innerHTML = '<tr><td colspan="9" style="padding:2rem;text-align:center;color:var(--muted);font-size:12px;">Noch keine Regeln für '+stratSrcLabel(stratCurrentSrc)+'</td></tr>';
+    if(cntEl) cntEl.textContent=''; return;
+  }
+  if(cntEl) cntEl.textContent = rules.length+' Regeln';
+  var labels = {
+    markt_minus_x:'Günstigster − x €', markt_minus_pct:'Günstigster − x %',
+    günstigster_plus_x:'Günstigster + x €', günstigster_plus_pct:'Günstigster + x %',
+    uvp_minus_rabatt:'UVP − Rabatt %', zielposition:'Zielposition', min_max:'Min / Max %'
+  };
+  var pBg  = {1:'#F3F4F6', 2:'#FFFBEB', 3:'#EBF3FC'};
+  var pClr = {1:'#4B5563', 2:'#92400E', 3:'#185FA5'};
+  tbody.innerHTML = rules.map(function(r, i) {
+    var isAct = r.aktiv;
+    var wertStr = r.strategie==='min_max'
+      ? 'Min '+r.min_pct+'% / Max '+r.max_pct+'%'
+      : r.strategie==='uvp_minus_rabatt'||r.strategie.indexOf('pct')>-1 ? r.wert+'%'
+      : r.strategie==='zielposition' ? 'Platz '+r.wert : r.wert+' €';
+
+    var toggleBtn = document.createElement('button');
+    toggleBtn.style.cssText = 'font-family:sans-serif;font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px;cursor:pointer;border:0.5px solid;background:'+(isAct?'var(--green-soft);color:var(--green);border-color:var(--green)':'var(--surface2);color:var(--muted);border-color:var(--border)');
+    toggleBtn.textContent = isAct?'Aktiv':'Inaktiv';
+    toggleBtn.onclick = (function(ii){return function(){stratToggleRule(ii);};})(i);
+
+    var delBtn = document.createElement('button');
+    delBtn.style.cssText = 'font-size:14px;color:#c0392b;background:none;border:none;cursor:pointer;padding:2px 6px;';
+    delBtn.textContent = '×';
+    delBtn.onclick = (function(ii){return function(){stratDeleteRule(ii);};})(i);
+
+    var tr = document.createElement('tr');
+    tr.style.cssText = 'background:#fff;opacity:'+(isAct?'1':'0.5')+';border-bottom:0.5px solid #e8e6e0;';
+    tr.innerHTML =
+      '<td style="padding:9px 12px;"><span style="background:'+(pBg[r.prioritaet]||'#eee')+';color:'+(pClr[r.prioritaet]||'#555')+';font-size:11px;font-weight:700;padding:2px 9px;border-radius:99px;">P'+r.prioritaet+'</span></td>'+
+      '<td style="padding:9px 12px;font-size:12px;">'+(r.season&&r.season!=='alle'?'<b>'+r.season+'</b>':'<span style="color:#aaa">alle</span>')+'</td>'+
+      '<td style="padding:9px 12px;font-size:12px;">'+(r.marke&&r.marke!=='alle'?'<b>'+r.marke+'</b>':'<span style="color:#aaa">alle</span>')+'</td>'+
+      '<td style="padding:9px 12px;font-size:12px;">'+(r.warengruppe?'<b>'+r.warengruppe+'</b>':'<span style="color:#aaa">—</span>')+'</td>'+
+      '<td style="padding:9px 12px;"><span style="background:var(--surface2);font-size:11px;font-weight:500;padding:3px 9px;border-radius:99px;">'+(labels[r.strategie]||r.strategie)+'</span></td>'+
+      '<td style="padding:9px 12px;font-family:monospace;font-size:12px;font-weight:600;">'+wertStr+'</td>'+
+      '<td style="padding:9px 12px;font-size:12px;color:#888;">'+(r.max_rabatt_pct?r.max_rabatt_pct+'%':'—')+'</td>'+
+      '<td style="padding:9px 12px;text-align:center;"></td>'+
+      '<td style="padding:9px 12px;text-align:center;"></td>';
+    var cells = tr.querySelectorAll('td');
+    cells[7].appendChild(toggleBtn);
+    cells[8].appendChild(delBtn);
+    return tr.outerHTML;
+  }).join('');
+}
+
+function stratShowStatus() {
+  var rules = stratData[stratCurrentSrc];
+  if(!rules||!rules.length){stratShowBanner('','');return;}
+  stratShowBanner(stratApplied[stratCurrentSrc]?'✓ Strategie für '+stratSrcLabel(stratCurrentSrc)+' ist aktiv.':'Strategie geladen — klick auf "Strategie anwenden".', stratApplied[stratCurrentSrc]?'success':'warning');
+}
+
+function stratShowBanner(msg, type) {
+  var el = document.getElementById('stratStatusBanner');
+  if(!el) return;
+  if(!msg){el.style.display='none';return;}
+  var s={info:'background:var(--blue-soft);color:var(--blue);border:0.5px solid rgba(24,95,165,0.2);',success:'background:var(--green-soft);color:var(--green);border:0.5px solid rgba(29,158,117,0.2);',warning:'background:var(--amber-soft);color:var(--amber);border:0.5px solid rgba(186,117,23,0.2);',error:'background:var(--accent-soft);color:var(--accent);border:0.5px solid rgba(230,59,43,0.2);'};
+  el.style.cssText='display:block;margin-bottom:1rem;padding:10px 14px;border-radius:var(--radius);font-size:12px;font-weight:500;'+(s[type]||s.info);
+  el.textContent=msg;
+}
+
+function stratCalcZielpreis(row, rules) {
+  var myPrice  = row.my_price;
+  var cheapest = row.cheapest_price;
+  var uvp      = (!isNaN(row.uvp) && row.uvp > 0) ? row.uvp : (row.hoechster || NaN);
+  var season   = ((row.name||'').match(/\b(20\d{2})\b/)||['',''])[1]||'Aktion';
+  var marke    = row.brand||'';
+  var wg       = row.warengruppe||'';
+  var baseCheapest = (!isNaN(row.niedrigster)&&row.niedrigster>0)?row.niedrigster:cheapest;
+  var active   = rules.filter(function(r){return r.aktiv;});
+  active.sort(function(a,b){return b.prioritaet-a.prioritaet;});
+  var matched  = null;
+  for(var i=0;i<active.length;i++){
+    var r=active[i];
+    var ms=!r.season||r.season==='alle'||r.season===season;
+    var mm=!r.marke||r.marke==='alle'||marke.toLowerCase().indexOf(r.marke.toLowerCase())>-1;
+    var mw=!r.warengruppe||r.warengruppe==='alle'||wg.toLowerCase().indexOf(r.warengruppe.toLowerCase())>-1;
+    if(ms&&mm&&mw){matched=r;break;}
+  }
+  if(!matched) return null;
+
+  // min_max strategy
+  // min_pct = Min Preis = niedrigster Zielpreis (größerer Rabatt)
+  // max_pct = Max Preis = höchster Zielpreis (kleinerer Rabatt)
+  if(matched.strategie==='min_max'){
+    if(isNaN(uvp)||uvp<=0) return null;
+    var minPrice = uvp*(1-matched.min_pct/100);  // Min Preis = niedrigster erlaubter Preis
+    var maxPrice = uvp*(1-matched.max_pct/100);  // Max Preis = höchster erlaubter Preis
+    if(isNaN(baseCheapest)||baseCheapest<=0) return Math.floor(maxPrice)+0.99;
+    var target = baseCheapest - 10;
+    target = Math.max(target, minPrice);
+    target = Math.min(target, maxPrice);
+    return Math.round((Math.floor(target)+0.99)*100)/100;
+  }
+
+  if(isNaN(baseCheapest)||baseCheapest<=0) return null;
+  var minAllowed=(!isNaN(uvp)&&uvp>0)?uvp*(1-matched.max_rabatt_pct/100):0;
+  var raw=null;
+  switch(matched.strategie){
+    case 'markt_minus_x':        raw=baseCheapest-matched.wert; break;
+    case 'markt_minus_pct':      raw=baseCheapest*(1-matched.wert/100); break;
+    case 'uvp_minus_rabatt':     if(!isNaN(uvp)&&uvp>0) raw=uvp*(1-matched.wert/100); break;
+    case 'günstigster_plus_x':   raw=baseCheapest+matched.wert; break;
+    case 'günstigster_plus_pct': raw=baseCheapest*(1+matched.wert/100); break;
+    case 'zielposition':         raw=baseCheapest-(matched.wert<=1?10:0); break;
+    default: return null;
+  }
+  if(raw===null||isNaN(raw)) return null;
+  raw=Math.floor(raw)+0.99;
+  if(raw<minAllowed) raw=Math.floor(minAllowed)+0.99;
+  if(!isNaN(uvp)&&uvp>0&&raw>uvp) raw=uvp;
+  return Math.round(raw*100)/100;
+}
+
+function stratApply() {
+  var rules=stratData[stratCurrentSrc];
+  if(!rules||!rules.length){stratShowBanner('Bitte zuerst Regeln hinzufügen.','error');return;}
+  var srcDropdown=document.getElementById('sourceSelect');
+  var activeSrc=srcDropdown?srcDropdown.value:'';
+  if(activeSrc!==stratCurrentSrc){
+    stratApplied[stratCurrentSrc]=true;
+    stratShowBanner('Strategie für '+stratSrcLabel(stratCurrentSrc)+' gespeichert. Wechsle zur Datenquelle um Zielpreise zu sehen.','warning');
+    return;
+  }
+  var count=0;
+  DATA.table.forEach(function(row){var z=stratCalcZielpreis(row,rules);row.zielpreis=z;if(z!==null)count++;});
+  stratApplied[stratCurrentSrc]=true;
+  stratShowBanner('✓ Zielpreise berechnet für '+count+' von '+DATA.table.length+' Artikeln.','success');
+  if(document.getElementById('tab-preisanpassungen').classList.contains('active')) renderTable();
+  updateCubeStratBlock();
+}
+
+function stratReset() {
+  // Clear calculated zielpreise
+  DATA.table.forEach(function(row){row.zielpreis=undefined;});
+  stratApplied[stratCurrentSrc] = false;
+  // Clear rules for current source
+  stratData[stratCurrentSrc] = [];
+  stratSave();
+  stratRenderTable();
+  stratShowBanner('Regeln und Zielpreise für '+stratSrcLabel(stratCurrentSrc)+' zurückgesetzt.','warning');
+  if(document.getElementById('tab-preisanpassungen').classList.contains('active')) renderTable();
+}
+
+function stratLoadCSV(file) {
+  if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var rows=parseCSV(e.target.result);
+    if(!rows.length){stratShowBanner('Keine Daten gefunden.','error');return;}
+    var rules=rows.map(function(r){
+      return{
+        prioritaet:     parseInt(r['prioritaet']||r['priorität']||'1')||1,
+        season:         (r['season']||'alle').trim(),
+        marke:          (r['marke']||'alle').trim(),
+        warengruppe:    (r['warengruppe']||'').trim(),
+        strategie:      (r['strategie']||'').trim().toLowerCase(),
+        wert:           parseFloat(r['wert']||'0')||0,
+        min_pct:        parseFloat(r['min_pct']||'20')||20,
+        max_pct:        parseFloat(r['max_pct']||'35')||35,
+        max_rabatt_pct: parseFloat(r['max_rabatt_pct']||'30')||30,
+        aktiv:          (r['aktiv']||'ja').trim().toLowerCase()!=='nein'
+      };
+    }).sort(function(a,b){return b.prioritaet-a.prioritaet;});
+    stratData[stratCurrentSrc]=rules;
+    stratApplied[stratCurrentSrc]=false;
+    stratSave();
+    stratRenderTable();
+    stratShowBanner(rules.length+' Regeln geladen.','info');
+  };
+  reader.readAsText(file,'UTF-8');
+  document.getElementById('stratCsvInput').value='';
+}
+
+function stratExportCSV() {
+  var rules=stratData[stratCurrentSrc];
+  if(!rules||!rules.length){stratShowBanner('Keine Regeln zum Exportieren.','error');return;}
+  var csv='prioritaet;season;marke;warengruppe;strategie;wert;min_pct;max_pct;max_rabatt_pct;aktiv\n';
+  rules.forEach(function(r){csv+=[r.prioritaet,r.season,r.marke,r.warengruppe||'',r.strategie,r.wert,r.min_pct||'',r.max_pct||'',r.max_rabatt_pct,r.aktiv?'ja':'nein'].join(';')+'\n';});
+  var a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
+  a.download='preisstrategie_'+stratCurrentSrc+'.csv';
+  a.click();
+}
+
+function stratDownloadTemplate() {
+  var csv='prioritaet;season;marke;warengruppe;strategie;wert;min_pct;max_pct;max_rabatt_pct;aktiv\n'+
+    '1;alle;alle;;uvp_minus_rabatt;30;;;30;ja\n'+
+    '2;2026;alle;;markt_minus_x;10;;;30;ja\n'+
+    '3;2026;Cube;;markt_minus_pct;5;;;25;ja\n'+
+    '2;alle;;Fahrradzubehör;min_max;0;20;35;;ja';
+  var a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
+  a.download='preisstrategie_vorlage.csv';
+  a.click();
+}
+function toggleCubeInsights(btn) {
+  var panel = document.getElementById('cubeInsightsPanel');
+  var arrow = document.getElementById('cubeInsightsArrow');
+  if (!panel) return;
+  var collapsed = panel.style.display === 'none';
+  panel.style.display = collapsed ? '' : 'none';
+  if (arrow) arrow.textContent = collapsed ? '▼' : '▶';
+  btn.childNodes[1].textContent = collapsed ? ' Insights ausblenden' : ' Insights einblenden';
+}
+
+function toggleSeasonCard(header) {
+  var body = document.getElementById('seasonCardBody');
+  var arrow = header.querySelector('span:last-child');
+  if (!body) return;
+  var collapsed = body.style.display === 'none';
+  body.style.display = collapsed ? '' : 'none';
+  if (arrow) arrow.textContent = collapsed ? '▼' : '▶';
+}
+
+function updateCubeStratBlock() {
+  var src = 'cube';
+  var hasRules = stratData[src] && stratData[src].length > 0 && stratApplied[src];
+  var activeDiv = document.getElementById('cubeStratActive');
+  var manualDiv = document.getElementById('cubeStratManual');
+  if (!activeDiv || !manualDiv) return;
+  if (hasRules) {
+    activeDiv.style.display = 'block';
+    manualDiv.style.display = 'none';
+  } else {
+    activeDiv.style.display = 'none';
+    manualDiv.style.display = 'block';
+  }
+}
+
+// ── Excel Downloads (SheetJS) ──
+function downloadNormalExcel() {
+  var filtered = getFilteredData();
+  if (!filtered.length) { showToast('Keine Daten zum Exportieren.', true); return; }
+  var rows = [['Produktname','Marke','Season','Mein Preis','Mein Rabatt','Niedrigster','Günstigster Anbieter','Höchster','Index','Zielpreis','Rabatt (Ziel)','Potenzial','UVP','Shops','Position']];
+  filtered.forEach(function(r) {
+    var sm = (r.name||'').match(/\b(20\d{2})\b/);
+    var season = sm ? sm[1] : (/aktion/i.test(r.name||'') ? 'Aktion' : '');
+    var niedrig = !isNaN(r.niedrigster) && r.niedrigster > 0 ? r.niedrigster : r.cheapest_price;
+    var idx = (!isNaN(r.my_price) && !isNaN(niedrig) && niedrig > 0) ? +(r.my_price / niedrig * 100).toFixed(1) : '';
+    var myRab = (!isNaN(r.uvp) && r.uvp > 0 && !isNaN(r.my_price)) ? +((r.uvp-r.my_price)/r.uvp*100).toFixed(1) : '';
+    var hasZiel = r.zielpreis !== undefined && r.zielpreis !== null;
+    var rabZiel = (hasZiel && !isNaN(r.uvp) && r.uvp > 0) ? +((r.uvp-r.zielpreis)/r.uvp*100).toFixed(1) : '';
+    var pot = hasZiel ? +(r.zielpreis - r.my_price).toFixed(2) : '';
+    rows.push([r.name||'', r.brand||'', season, r.my_price||'', myRab, niedrig||'', r.cheapest_provider||'', r.hoechster||'', idx, r.zielpreis||'', rabZiel, pot, r.uvp||'', r.num_shops||'', r.position||'']);
+  });
+  excelExport(rows, 'preisanpassungen_' + currentSource + '.xlsx');
+}
+
+function downloadCubeExcel() {
+  if (!filteredClusters || !filteredClusters.length) { showToast('Keine Daten zum Exportieren.', true); return; }
+
+  // Build a lookup: SKU → cluster data
+  var clusterBySku = {};
+  filteredClusters.forEach(function(c) {
+    c.skus.forEach(function(sku) { clusterBySku[sku] = c; });
+  });
+
+  // Use allClusters SKU list to expand per Artikelnummer
+  // Each cluster may have multiple SKUs - export one row per SKU
+  var rows = [['SKU (Artikelnummer)','Produktname','Modellnummer','Season','Mein Preis','Mein Rabatt %','Ø Markt','Niedrigster','Günstigster Shop','Höchster','Preisindex %','Zielpreis','Rabatt (Ziel) %','Potenzial','Status','Empfehlung','UVP','Anzahl Shops']];
+
+  filteredClusters.forEach(function(c) {
+    var myRab    = (c.myPrice && c.uvp) ? +((c.uvp-c.myPrice)/c.uvp*100).toFixed(1) : '';
+    var rabZiel  = (c.targetPrice && c.uvp) ? +((c.uvp-c.targetPrice)/c.uvp*100).toFixed(1) : '';
+    var pot      = (c.targetPrice && c.myPrice) ? +(c.targetPrice-c.myPrice).toFixed(2) : '';
+    var idx      = c.priceIndex ? +c.priceIndex.toFixed(1) : '';
+    var statusDE = {kritisch:'Kritisch', marge:'Marge verschenkt', optimal:'Optimal', nc:'Nicht wettbewerbsfähig'};
+    var actionDE = {reduce:'Senken', raise:'Erhöhen', keep:'Lassen'};
+
+    if (c.skus && c.skus.length > 0) {
+      c.skus.forEach(function(sku, i) {
+        var moNr = c.modellnummern && c.modellnummern[i] ? c.modellnummern[i] : (c.modellnummern && c.modellnummern[0] ? c.modellnummern[0] : '');
+        rows.push([
+          sku, c.name||'', moNr, c.season||'',
+          c.myPrice||'', myRab,
+          c.avgMarket ? +c.avgMarket.toFixed(2) : '',
+          c.minPrice||'', c.cheapestShop||'', c.maxPrice||'',
+          idx, c.targetPrice||'', rabZiel, pot,
+          statusDE[c.status]||c.status||'',
+          actionDE[c.action]||c.action||'',
+          c.uvp||'', c.shops ? c.shops.length : ''
+        ]);
+      });
+    } else {
+      // Cluster without SKUs
+      rows.push([
+        '', c.name||'', '', c.season||'',
+        c.myPrice||'', myRab,
+        c.avgMarket ? +c.avgMarket.toFixed(2) : '',
+        c.minPrice||'', c.cheapestShop||'', c.maxPrice||'',
+        idx, c.targetPrice||'', rabZiel, pot,
+        statusDE[c.status]||c.status||'',
+        actionDE[c.action]||c.action||'',
+        c.uvp||'', c.shops ? c.shops.length : ''
+      ]);
+    }
+  });
+
+  excelExport(rows, 'cube_preisanalyse_per_sku.xlsx');
+}
+
+function excelExport(rows, filename) {
+  // Use SheetJS if available, otherwise fall back to CSV
+  if (typeof XLSX !== 'undefined') {
+    var ws = XLSX.utils.aoa_to_sheet(rows);
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Daten');
+    // Auto column widths
+    var cols = rows[0].map(function(h, i) {
+      var max = rows.reduce(function(m, r) { return Math.max(m, String(r[i]||'').length); }, h.length);
+      return { wch: Math.min(max + 2, 40) };
+    });
+    ws['!cols'] = cols;
+    XLSX.writeFile(wb, filename);
+  } else {
+    // Fallback: CSV download
+    var csv = rows.map(function(r) { return r.map(function(v) { return '"'+String(v||'').replace(/"/g,'""')+'"'; }).join(';'); }).join('\n');
+    var a = document.createElement('a');
+    a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
+    a.download = filename.replace('.xlsx', '.csv');
+    a.click();
+  }
+}
+// ── Status Schwellenwerte ──
+var statusThresholds = { kritisch: 109, marge: 100 };
+
+// Load saved thresholds
+(function() {
+  try {
+    var saved = localStorage.getItem('fxxl_thresholds');
+    if (saved) {
+      var p = JSON.parse(saved);
+      if (p.kritisch) statusThresholds.kritisch = p.kritisch;
+      if (p.marge)    statusThresholds.marge    = p.marge;
+    }
+  } catch(e) {}
+  // Apply to inputs when settings panel opens
+})();
+
+function saveStatusThresholds() {
+  var k = parseInt(document.getElementById('thresh_kritisch').value) || 109;
+  var m = parseInt(document.getElementById('thresh_marge').value)    || 100;
+  statusThresholds.kritisch = k;
+  statusThresholds.marge    = m;
+  try { localStorage.setItem('fxxl_thresholds', JSON.stringify(statusThresholds)); } catch(e) {}
+  var msg = document.getElementById('threshSaveMsg');
+  if (msg) { msg.style.display='inline'; setTimeout(function(){msg.style.display='none';},2000); }
+  // Re-apply to cube clusters if loaded
+  if (allClusters && allClusters.length) {
+    allClusters.forEach(function(c) { applyStatusThreshold(c); });
+    if (filteredClusters && filteredClusters.length) {
+      filteredClusters.forEach(function(c) { applyStatusThreshold(c); });
+    }
+    cubeRenderKPIs(filteredClusters);
+    cubeRenderInsights(filteredClusters);
+    cubeRenderTable(filteredClusters);
+  }
+}
+
+function resetStatusThresholds() {
+  statusThresholds = { kritisch: 109, marge: 100 };
+  try { localStorage.removeItem('fxxl_thresholds'); } catch(e) {}
+  document.getElementById('thresh_kritisch').value = 109;
+  document.getElementById('thresh_marge').value    = 100;
+  saveStatusThresholds();
+}
+
+function applyStatusThreshold(c) {
+  if (c.ncFlag) { c.status = 'nc'; return; }
+  if (c.myPrice !== null && c.minPrice !== null && c.avgMarket !== null) {
+    if (c.priceIndex !== null && c.priceIndex > statusThresholds.kritisch && c.targetPrice !== null) {
+      c.status = 'kritisch';
+    } else if (c.priceIndex !== null && c.priceIndex < statusThresholds.marge) {
+      c.status = 'marge';
+    } else {
+      c.status = 'optimal';
+    }
+  }
+}
+
+// Sync inputs when navigating to settings panel
+var _origSettingsNav = settingsNav;
+settingsNav = function(btn, panel) {
+  _origSettingsNav(btn, panel);
+  if (panel === 'statusdefs') {
+    var ki = document.getElementById('thresh_kritisch');
+    var mi = document.getElementById('thresh_marge');
+    if (ki) ki.value = statusThresholds.kritisch;
+    if (mi) mi.value = statusThresholds.marge;
+  }
+};
 
 // ══════════════════════════════════════════
 // SUPABASE INTEGRATION
@@ -2442,9 +3401,14 @@ var masterfeedCat1 = [], masterfeedCat2 = [], masterfeedCat3 = [], masterfeedCat
 
 function loadMasterfeed() {
   if (masterfeedLoaded) return Promise.resolve();
+  console.log('[Masterfeed] Lade von:', MASTERFEED_URL);
   return fetch(MASTERFEED_URL)
-    .then(function(r) { return r.text(); })
+    .then(function(r) { 
+      console.log('[Masterfeed] HTTP Status:', r.status);
+      return r.text(); 
+    })
     .then(function(text) {
+      console.log('[Masterfeed] Erste 200 Zeichen:', text.substring(0,200));
       var rows = parseCSVPipe(text);
       masterfeedData = {};
       var cat1s = {}, cat2s = {}, cat3s = {}, cat4s = {};
@@ -2482,11 +3446,35 @@ function loadMasterfeed() {
       masterfeedCat3 = Object.keys(cat3s).sort();
       masterfeedCat4 = Object.keys(cat4s).sort();
       masterfeedLoaded = true;
-      var mfCount = Object.keys(masterfeedData).length;
-      console.log('Masterfeed geladen:', mfCount, 'Produkte');
-
+      var mfKeys = Object.keys(masterfeedData);
+      console.log('[Masterfeed] Geladen:', mfKeys.length, 'Produkte, Beispiel-SKUs:', mfKeys.slice(0,5));
       // Enrich existing table data if already loaded
       if (DATA.table && DATA.table.length) enrichTableWithMasterfeed();
+      // Enrich clusters with masterfeed attributes for new filters
+      if (typeof allClusters !== 'undefined' && allClusters) {
+        allClusters.forEach(function(c) {
+          if (!c.skus || !c.skus.length) return;
+          for (var si = 0; si < c.skus.length; si++) {
+            var mf = masterfeedData[(c.skus[si]||'').toUpperCase()];
+            if (mf) {
+              c.mfBrand          = mf.brand          || '';
+              c.mfCat1           = mf.Cat1            || '';
+              c.mfCat2           = mf.Cat2            || '';
+              c.mfCat3           = mf.Cat3            || '';
+              c.mfCat4           = mf.Cat4            || '';
+              c.mfGeschlecht     = mf.Geschlecht      || '';
+              c.mfRadgroesse     = mf.Radgroesse      || '';
+              c.mfRahmenmaterial = mf.Rahmenmaterial  || '';
+              c.mfRahmenform     = mf.Rahmenform      || '';
+              c.mfGaenge         = mf.Gaenge          || '';
+              c.mfSchaltart      = mf.Schaltart       || '';
+              c.mfFarbe          = mf.Farbe           || '';
+              break;
+            }
+          }
+        });
+        populateMasterfeedFilters();
+      }
       // Re-render cube with enriched names + bestand
       if (typeof allClusters !== 'undefined' && allClusters && allClusters.length) {
         allClusters.forEach(function(c) {
@@ -2514,10 +3502,7 @@ function loadMasterfeed() {
       }
       populateCatFilters();
     })
-    .catch(function(e) { 
-      console.warn('Masterfeed konnte nicht geladen werden:', e);
-      showToast('Masterfeed Fehler: ' + e.message, true);
-    });
+    .catch(function(e) { console.warn('Masterfeed konnte nicht geladen werden:', e); });
 }
 
 // CSV parser for pipe-separated files
@@ -2526,7 +3511,7 @@ function parseCSVPipe(text) {
   if (lines.length < 2) return [];
   // Auto-detect separator: | or ;
   var sep = lines[0].indexOf('|') > -1 ? '|' : ';';
-  var headers = lines[0].split(sep).map(function(h) { return h.trim().replace(/^\uFEFF/, ''); });
+  var headers = lines[0].split(sep).map(function(h) { return h.trim(); });
   var rows = [];
   for (var i = 1; i < lines.length; i++) {
     if (!lines[i].trim()) continue;
@@ -2592,25 +3577,17 @@ function applyCatFilter(n, val) {
   normalApplyFilters();
 }
 
-window._srIdx = 0;
-
-// Event delegation for shop toggles
-document.addEventListener('click', function(e) {
-  var btn = e.target.closest ? e.target.closest('.shop-toggle') : null;
-  if (!btn) return;
-  var rowId = btn.getAttribute('data-rid');
+function cubeToggleShops(btn) {
+  var rowId = btn.getAttribute('data-sr');
   if (!rowId) return;
   var el = document.getElementById(rowId);
   if (!el) return;
   var isOpen = el.style.display !== 'none';
   el.style.display = isOpen ? 'none' : 'block';
   btn.textContent = isOpen ? '▼ alle' : '▲ weniger';
-});
-
+}
 
 
 
 
 </script>
-</body>
-</html>
