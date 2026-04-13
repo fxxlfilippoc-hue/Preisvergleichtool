@@ -449,27 +449,27 @@
   #cube-panel.active { display: block; }
 
   .cube-filters {
-    display: flex; flex-wrap: wrap; gap: 10px;
-    padding: 1rem 1.25rem;
+    display: flex; flex-wrap: wrap; gap: 6px 8px;
+    padding: 0.6rem 1rem;
     background: var(--surface);
     border: 0.5px solid var(--border);
     border-radius: var(--radius-lg);
     margin-bottom: 1rem;
     align-items: flex-end;
   }
-  .cube-filters .fg { display: flex; flex-direction: column; gap: 4px; min-width: 140px; }
-  .cube-filters label { font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+  .cube-filters .fg { display: flex; flex-direction: column; gap: 3px; min-width: 100px; flex: 1 1 100px; }
+  .cube-filters label { font-size: 9px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); white-space: nowrap; }
   .cube-filters input, .cube-filters select {
-    font-family: 'DM Sans', sans-serif; font-size: 12px;
+    font-family: 'DM Sans', sans-serif; font-size: 11px;
     border: 0.5px solid var(--border); border-radius: var(--radius);
-    padding: 6px 10px; background: var(--surface); color: var(--text);
+    padding: 4px 6px; background: var(--surface); color: var(--text);
     outline: none;
   }
   .cube-filters input:focus, .cube-filters select:focus { border-color: var(--accent); }
   .cube-filters .filter-actions { display: flex; align-items: flex-end; }
 
   .cube-kpi-row {
-    display: grid; grid-template-columns: repeat(7, 1fr);
+    display: grid; grid-template-columns: repeat(8, 1fr);
     gap: 10px; margin-bottom: 1rem;
   }
   .cube-kpi {
@@ -3447,6 +3447,8 @@ function loadMasterfeed() {
       masterfeedCat4 = Object.keys(cat4s).sort();
       masterfeedLoaded = true;
       var mfKeys = Object.keys(masterfeedData);
+      var mfSample = mfKeys.slice(0,2).map(function(k){return k+':qty='+masterfeedData[k].qty;}).join(' | ');
+      showToast('MF: '+mfKeys.length+' SKUs | '+mfSample, false);
       console.log('[Masterfeed] Geladen:', mfKeys.length, 'Produkte, Beispiel-SKUs:', mfKeys.slice(0,5));
       // Enrich existing table data if already loaded
       if (DATA.table && DATA.table.length) enrichTableWithMasterfeed();
