@@ -2269,8 +2269,8 @@ function cubeBuildDashboard(data){
       c.seenSkus[sku] = true;
       c.skus.push(sku);
       // Add qty from masterfeed
-      if (masterfeedLoaded && masterfeedData[sku] !== undefined) {
-        c.totalQty += (masterfeedData[sku].qty || 0);
+      if (masterfeedLoaded && masterfeedData[sku.toUpperCase()] !== undefined) {
+        c.totalQty += (masterfeedData[sku.toUpperCase()].qty || 0);
       }
     }
     if(benutzerd && c.modellnummern.indexOf(benutzerd)<0) c.modellnummern.push(benutzerd);
@@ -2635,7 +2635,7 @@ function cubeRenderTable(src){
         // Bestand cell
         var qty = 0;
         if (masterfeedLoaded && c.skus) {
-          c.skus.forEach(function(s){ if(masterfeedData[s]) qty += (masterfeedData[s].qty||0); });
+          c.skus.forEach(function(s){ if(masterfeedData[s.toUpperCase()]) qty += (masterfeedData[s.toUpperCase()].qty||0); });
         }
         var td3 = 'padding:7px 12px;vertical-align:middle;border-bottom:0.5px solid #e8e6e0;font-size:13px;';
         if (!masterfeedLoaded) return '<td style="'+td3+'color:#ccc;">—</td>';
@@ -3373,7 +3373,7 @@ function loadMasterfeed() {
       masterfeedData = {};
       var cat1s = {}, cat2s = {}, cat3s = {}, cat4s = {};
       rows.forEach(function(r) {
-        var sku = (r['sku'] || r['SKU'] || '').trim();
+        var sku = (r['sku'] || r['SKU'] || '').trim().toUpperCase();
         if (!sku) return;
         masterfeedData[sku] = {
           name:           r['name'] || '',
@@ -3408,7 +3408,8 @@ function loadMasterfeed() {
       masterfeedLoaded = true;
       var mfCount = Object.keys(masterfeedData).length;
       console.log('Masterfeed geladen:', mfCount, 'Produkte');
-      showToast('Masterfeed geladen: ' + mfCount + ' Produkte', false);
+      var mfSample = Object.keys(masterfeedData).slice(0,2).join(', ');
+      showToast('Masterfeed: ' + mfCount + ' Produkte. Beispiel-SKUs: ' + mfSample, false);
       // Enrich existing table data if already loaded
       if (DATA.table && DATA.table.length) enrichTableWithMasterfeed();
       // Debug: check SKU matching
@@ -3416,7 +3417,7 @@ function loadMasterfeed() {
       var matched = 0;
       if (typeof allClusters !== 'undefined' && allClusters) {
         allClusters.forEach(function(c) {
-          if (c.skus) c.skus.forEach(function(s){ if(masterfeedData[s]) matched++; });
+          if (c.skus) c.skus.forEach(function(s){ if(masterfeedData[s.toUpperCase()]) matched++; });
         });
       }
       console.log('Masterfeed SKUs:', mfSkus.length, '| Beispiel:', mfSkus.slice(0,3));
@@ -3430,20 +3431,20 @@ function loadMasterfeed() {
           // Enrich name from masterfeed
           if (c.skus && c.skus.length) {
             for (var si = 0; si < c.skus.length; si++) {
-              var feed = masterfeedData[c.skus[si]];
+              var feed = masterfeedData[(c.skus[si]||'').toUpperCase()];
               if (feed && feed.name) { c.name = feed.name; break; }
             }
           }
           c.name = c.name.replace(/^cube\s+/i, '').trim();
           // Recalculate totalQty now that masterfeed is loaded
           c.totalQty = 0;
-          if (c.skus) c.skus.forEach(function(s){ if(masterfeedData[s]) c.totalQty += (masterfeedData[s].qty||0); });
+          if (c.skus) c.skus.forEach(function(s){ var su=s.toUpperCase(); if(masterfeedData[su]) c.totalQty += (masterfeedData[su].qty||0); });
         });
         if (typeof filteredClusters !== 'undefined' && filteredClusters && filteredClusters.length) {
           filteredClusters.forEach(function(c) {
             c.name = c.name.replace(/^cube\s+/i, '').trim();
             c.totalQty = 0;
-            if (c.skus) c.skus.forEach(function(s){ if(masterfeedData[s]) c.totalQty += (masterfeedData[s].qty||0); });
+            if (c.skus) c.skus.forEach(function(s){ var su=s.toUpperCase(); if(masterfeedData[su]) c.totalQty += (masterfeedData[su].qty||0); });
           });
           cubeRenderTable(filteredClusters);
           cubeRenderInsights(filteredClusters);
@@ -3463,7 +3464,7 @@ function parseCSVPipe(text) {
   if (lines.length < 2) return [];
   // Auto-detect separator: | or ;
   var sep = lines[0].indexOf('|') > -1 ? '|' : ';';
-  var headers = lines[0].split(sep).map(function(h) { return h.trim(); });
+  var headers = lines[0].split(sep).map(function(h) { return h.trim().replace(/^\uFEFF/, ''); });
   var rows = [];
   for (var i = 1; i < lines.length; i++) {
     if (!lines[i].trim()) continue;
@@ -3479,7 +3480,7 @@ function parseCSVPipe(text) {
 function enrichTableWithMasterfeed() {
   if (!DATA.table) return;
   DATA.table.forEach(function(row) {
-    var feed = masterfeedData[row.sku];
+    var feed = masterfeedData[(row.sku||'').toUpperCase()];
     if (!feed) return;
     // Enrich with masterfeed data
     row.qty            = feed.qty;
