@@ -628,7 +628,6 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
-</script>
 <body>
 
 <!-- Loading Overlay -->
@@ -2085,6 +2084,13 @@ function settingsNav(btn, panel) {
   });
   var target = document.getElementById('settings-' + panel);
   if (target) target.style.display = 'block';
+  // Sync threshold inputs
+  if (panel === 'statusdefs') {
+    var ki = document.getElementById('thresh_kritisch');
+    var mi = document.getElementById('thresh_marge');
+    if (ki) ki.value = statusThresholds.kritisch;
+    if (mi) mi.value = statusThresholds.marge;
+  }
 }
 
 function stratApplyFromTable() {
@@ -2688,8 +2694,8 @@ function cubeRenderTable(src){
 }
 
 
-</script>
-<script>
+
+
 
 // ── Eingebettete Demo-Daten (werden beim ersten Laden ersetzt) ──
 var DATA = {"total":2892,"with_comp":2257,"avg_diff":28.66,"position_1_pct":88.8,"price_groups":{"cheaper":{"count":110,"pct":4.9},"semi_cheaper":{"count":11,"pct":0.5},"neutral":{"count":1812,"pct":80.3},"semi_expensive":{"count":29,"pct":1.3},"expensive":{"count":295,"pct":13.1}},"competitors":[{"name":"lucky-bike.de","matches":1585,"cheapest":784,"avg_diff":-5.64},{"name":"fahrrad.de","matches":1004,"cheapest":708,"avg_diff":0.97},{"name":"bike-discount.de","matches":1412,"cheapest":454,"avg_diff":77.5},{"name":"multicycle.de","matches":375,"cheapest":213,"avg_diff":198.79},{"name":"rabe-bike.de","matches":970,"cheapest":98,"avg_diff":-92.9}],"positions":{"1":2568,"2":269,"3":53,"4+":2},"table":[]};
@@ -3364,6 +3370,13 @@ function settingsNav(btn, panel) {
   });
   var target = document.getElementById('settings-' + panel);
   if (target) target.style.display = 'block';
+  // Sync threshold inputs
+  if (panel === 'statusdefs') {
+    var ki = document.getElementById('thresh_kritisch');
+    var mi = document.getElementById('thresh_marge');
+    if (ki) ki.value = statusThresholds.kritisch;
+    if (mi) mi.value = statusThresholds.marge;
+  }
 }
 
 function stratApplyFromTable() {
@@ -4516,17 +4529,7 @@ function applyStatusThreshold(c) {
   }
 }
 
-// Sync inputs when navigating to settings panel
-var _origSettingsNav = settingsNav;
-settingsNav = function(btn, panel) {
-  _origSettingsNav(btn, panel);
-  if (panel === 'statusdefs') {
-    var ki = document.getElementById('thresh_kritisch');
-    var mi = document.getElementById('thresh_marge');
-    if (ki) ki.value = statusThresholds.kritisch;
-    if (mi) mi.value = statusThresholds.marge;
-  }
-};
+
 
 // ══════════════════════════════════════════
 // SUPABASE INTEGRATION
@@ -4815,5 +4818,6 @@ document.addEventListener('click', function(e) {
 
 
 
+</script>
 </body>
 </html>
