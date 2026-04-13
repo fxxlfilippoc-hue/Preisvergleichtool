@@ -3366,9 +3366,14 @@ var masterfeedCat1 = [], masterfeedCat2 = [], masterfeedCat3 = [], masterfeedCat
 
 function loadMasterfeed() {
   if (masterfeedLoaded) return Promise.resolve();
+  console.log('[Masterfeed] Lade von:', MASTERFEED_URL);
   return fetch(MASTERFEED_URL)
-    .then(function(r) { return r.text(); })
+    .then(function(r) { 
+      console.log('[Masterfeed] HTTP Status:', r.status);
+      return r.text(); 
+    })
     .then(function(text) {
+      console.log('[Masterfeed] Erste 200 Zeichen:', text.substring(0,200));
       var rows = parseCSVPipe(text);
       masterfeedData = {};
       var cat1s = {}, cat2s = {}, cat3s = {}, cat4s = {};
@@ -3406,7 +3411,8 @@ function loadMasterfeed() {
       masterfeedCat3 = Object.keys(cat3s).sort();
       masterfeedCat4 = Object.keys(cat4s).sort();
       masterfeedLoaded = true;
-      console.log('Masterfeed geladen:', Object.keys(masterfeedData).length, 'Produkte');
+      var mfKeys = Object.keys(masterfeedData);
+      console.log('[Masterfeed] Geladen:', mfKeys.length, 'Produkte, Beispiel-SKUs:', mfKeys.slice(0,5));
       // Enrich existing table data if already loaded
       if (DATA.table && DATA.table.length) enrichTableWithMasterfeed();
       // Re-render cube with enriched names + bestand
