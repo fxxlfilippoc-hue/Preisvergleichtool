@@ -2358,6 +2358,16 @@ function cubeApplyFilters(){
     }
   }
 
+  // DEBUG: count SKU matches
+  var _matched = 0, _total = 0;
+  allClusters.forEach(function(c) {
+    if (c.skus) c.skus.forEach(function(s) {
+      _total++;
+      if (masterfeedData[s.toUpperCase()]) _matched++;
+    });
+  });
+  showToast('Cube SKU Matches: ' + _matched + '/' + _total + ' (MF geladen: ' + masterfeedLoaded + ')', false);
+
   // Enrich cluster names from masterfeed + remove "Cube" prefix
   allClusters.forEach(function(c) {
     // Try to get name from masterfeed via first SKU
