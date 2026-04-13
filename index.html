@@ -2343,6 +2343,32 @@ function cubeBuildDashboard(data){
     ovShop.appendChild(o);
   });
 
+  // Enrich clusters with masterfeed attributes (brand, cat, etc.) if loaded
+  if (masterfeedLoaded) {
+    allClusters.forEach(function(c) {
+      if (!c.skus || !c.skus.length) return;
+      for (var si = 0; si < c.skus.length; si++) {
+        var mf = masterfeedData[(c.skus[si]||'').toUpperCase()];
+        if (mf) {
+          c.mfBrand          = mf.brand          || '';
+          c.mfCat1           = mf.cat1            || '';
+          c.mfCat2           = mf.cat2            || '';
+          c.mfCat3           = mf.cat3            || '';
+          c.mfCat4           = mf.cat4            || '';
+          c.mfGeschlecht     = mf.geschlecht      || '';
+          c.mfRadgroesse     = mf.radgroesse      || '';
+          c.mfRahmenmaterial = mf.rahmenmaterial  || '';
+          c.mfRahmenform     = mf.rahmenform      || '';
+          c.mfGaenge         = mf.gaenge          || '';
+          c.mfSchaltart      = mf.schaltart       || '';
+          c.mfFarbe          = mf.farbe           || '';
+          break;
+        }
+      }
+    });
+    populateMasterfeedFilters();
+  }
+
   cubeApplyFilters();
 }
 
