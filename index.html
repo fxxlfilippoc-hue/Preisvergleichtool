@@ -2571,6 +2571,7 @@ function cubeRenderTable(src){
     {k:'action',    l:'Empfehlung',  w:'90px'},
     {k:'status',    l:'Status',      w:'110px'},
     {k:'uvp',       l:'UVP',         w:'80px'},
+    {k:'totalQty',  l:'Bestand',     w:'70px'},
     {k:'shops',     l:'Shops',       w:'110px'},
   ];
 
@@ -2619,6 +2620,17 @@ function cubeRenderTable(src){
       '<td style="'+td+'">'+cubeStatusBadge(c.status)+'</td>' +
       '<td style="'+mono+'color:#888;">'+cubeFmtE(c.uvp)+'</td>' +
       (function(){
+        // Bestand cell
+        var qty = 0;
+        if (masterfeedLoaded && c.skus) {
+          c.skus.forEach(function(s){ if(masterfeedData[s]) qty += (masterfeedData[s].qty||0); });
+        }
+        var td3 = 'padding:7px 12px;vertical-align:middle;border-bottom:0.5px solid #e8e6e0;font-size:13px;';
+        if (!masterfeedLoaded) return '<td style="'+td3+'color:#ccc;">—</td>';
+        var qClr = qty===0?'#c0392b':qty<5?'#92400E':'#1a7a3f';
+        return '<td style="'+td3+'font-weight:600;color:'+qClr+';">'+qty+'</td>';
+      })() +
+      (function(){
         var shopCount = c.shops ? c.shops.length : 0;
         var rowId = 'sr_' + c.key.replace(/\W/g,'_').substring(0,30);
         var shopPrices = {};
@@ -2630,7 +2642,7 @@ function cubeRenderTable(src){
         }
         var shopKeys = Object.keys(shopPrices).sort(function(a,b){ return shopPrices[a]-shopPrices[b]; });
         var hasMore = shopKeys.length > 1;
-        var toggleBtn = hasMore ? '<span onclick="cubeToggleShops(\'' + rowId + '\')" style="cursor:pointer;font-size:10px;color:#185FA5;margin-left:6px;">▼ alle</span>' : '';
+        var toggleBtn = hasMore ? '<span data-sr="' + rowId + '" onclick="cubeToggleShops(this)" style="cursor:pointer;font-size:10px;color:#185FA5;margin-left:6px;">▼ alle</span>' : '';
         var shopList = '<div id="' + rowId + '" style="display:none;margin-top:5px;border-top:0.5px solid #eee;padding-top:4px;">'
           + shopKeys.map(function(sh) {
               var isCh = sh === c.cheapestShop;
@@ -3495,18 +3507,7 @@ function cubeToggleShops(rowId) {
   }
 }
 
-function cubeToggleShops(rowId) {
-  var el = document.getElementById(rowId);
-  if (!el) return;
-  var isOpen = el.style.display !== 'none';
-  el.style.display = isOpen ? 'none' : 'block';
-  // Update toggle button text
-  var td = el.parentElement;
-  if (td) {
-    var span = td.querySelector('span[onclick]');
-    if (span) span.textContent = isOpen ? '▼ alle' : '▲ weniger';
-  }
-}
+
 
 
 </script>
