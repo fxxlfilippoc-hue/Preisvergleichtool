@@ -1456,9 +1456,21 @@ function onSourceChange(source) {
       var label = sel.options[sel.selectedIndex].text;
       showToast(label + ': ' + parsed.length.toLocaleString('de-DE') + ' Artikel geladen');
       toggleCubePanel(source === 'cube');
-      if(source === 'cube') { cubeBuildDashboard(parsed); updateCubeStratBlock(); }
-      if (masterfeedLoaded) enrichTableWithMasterfeed();
-      else loadMasterfeed();
+      if(source === 'cube') {
+        if (masterfeedLoaded) {
+          cubeBuildDashboard(parsed);
+          updateCubeStratBlock();
+        } else {
+          // Load masterfeed first, then build cube dashboard
+          loadMasterfeed().then(function() {
+            cubeBuildDashboard(parsed);
+            updateCubeStratBlock();
+          });
+        }
+      } else {
+        if (masterfeedLoaded) enrichTableWithMasterfeed();
+        else loadMasterfeed();
+      }
       populateCatFilters();
       stratUpdateTableBtn();
       // Auto-apply strategy if rules exist for this source
@@ -3397,9 +3409,10 @@ function loadMasterfeed() {
       console.log('Masterfeed geladen:', Object.keys(masterfeedData).length, 'Produkte');
       // Enrich existing table data if already loaded
       if (DATA.table && DATA.table.length) enrichTableWithMasterfeed();
-      // Re-render cube with enriched names
+      // Re-render cube with enriched names + bestand
       if (typeof allClusters !== 'undefined' && allClusters && allClusters.length) {
         allClusters.forEach(function(c) {
+          // Enrich name from masterfeed
           if (c.skus && c.skus.length) {
             for (var si = 0; si < c.skus.length; si++) {
               var feed = masterfeedData[c.skus[si]];
@@ -3407,9 +3420,16 @@ function loadMasterfeed() {
             }
           }
           c.name = c.name.replace(/^cube\s+/i, '').trim();
+          // Recalculate totalQty now that masterfeed is loaded
+          c.totalQty = 0;
+          if (c.skus) c.skus.forEach(function(s){ if(masterfeedData[s]) c.totalQty += (masterfeedData[s].qty||0); });
         });
         if (typeof filteredClusters !== 'undefined' && filteredClusters && filteredClusters.length) {
-          filteredClusters.forEach(function(c) { c.name = c.name.replace(/^cube\s+/i, '').trim(); });
+          filteredClusters.forEach(function(c) {
+            c.name = c.name.replace(/^cube\s+/i, '').trim();
+            c.totalQty = 0;
+            if (c.skus) c.skus.forEach(function(s){ if(masterfeedData[s]) c.totalQty += (masterfeedData[s].qty||0); });
+          });
           cubeRenderTable(filteredClusters);
           cubeRenderInsights(filteredClusters);
         }
@@ -3491,20 +3511,14 @@ function applyCatFilter(n, val) {
   normalApplyFilters();
 }
 
-function cubeToggleShops(rowId) {
+function cubeToggleShops(btn) {
+  var rowId = btn.getAttribute('data-sr');
+  if (!rowId) return;
   var el = document.getElementById(rowId);
   if (!el) return;
-  var btn = el.previousElementSibling ? el.previousElementSibling.querySelector('span[onclick]') : null;
-  // Find the toggle button - it's in the parent td
-  var td = el.parentElement;
-  var toggleSpan = td ? td.querySelector('span[onclick]') : null;
-  if (el.style.display === 'none') {
-    el.style.display = 'block';
-    if (toggleSpan) toggleSpan.textContent = '▲ weniger';
-  } else {
-    el.style.display = 'none';
-    if (toggleSpan) toggleSpan.textContent = '▼ alle';
-  }
+  var isOpen = el.style.display !== 'none';
+  el.style.display = isOpen ? 'none' : 'block';
+  btn.textContent = isOpen ? '▼ alle' : '▲ weniger';
 }
 
 
