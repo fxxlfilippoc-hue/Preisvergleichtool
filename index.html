@@ -2237,7 +2237,8 @@ function cubeBuildDashboard(data){
       myPrice:null, uvp:null,
       skus:[], modellnummern:[], seenSkus:{},
       marketPrices:[], shops:[],
-      preisvorschlag:null, distAbs:null, priceIndex:null
+      preisvorschlag:null, distAbs:null, priceIndex:null,
+      totalQty:0
     };
     var c = clusterMap[key];
 
@@ -2255,6 +2256,10 @@ function cubeBuildDashboard(data){
     if(sku && !c.seenSkus[sku]){
       c.seenSkus[sku] = true;
       c.skus.push(sku);
+      // Add qty from masterfeed
+      if (masterfeedLoaded && masterfeedData[sku] !== undefined) {
+        c.totalQty += (masterfeedData[sku].qty || 0);
+      }
     }
     if(benutzerd && c.modellnummern.indexOf(benutzerd)<0) c.modellnummern.push(benutzerd);
 
@@ -2340,6 +2345,22 @@ function cubeApplyFilters(){
       infoEl.style.color = 'var(--blue)';
     }
   }
+
+  // Enrich cluster names from masterfeed + remove "Cube" prefix
+  allClusters.forEach(function(c) {
+    // Try to get name from masterfeed via first SKU
+    if (masterfeedLoaded && c.skus && c.skus.length) {
+      for (var si = 0; si < c.skus.length; si++) {
+        var feed = masterfeedData[c.skus[si]];
+        if (feed && feed.name) {
+          c.name = feed.name;
+          break;
+        }
+      }
+    }
+    // Remove "Cube " prefix (case-insensitive)
+    c.name = c.name.replace(/^cube\s+/i, '').trim();
+  });
 
   // Filter + Neuberechnung mit Strategie
   filteredClusters = allClusters.filter(function(c){
@@ -2597,10 +2618,35 @@ function cubeRenderTable(src){
       '<td style="'+td+'">'+cubeActionBadge(c.action)+'</td>' +
       '<td style="'+td+'">'+cubeStatusBadge(c.status)+'</td>' +
       '<td style="'+mono+'color:#888;">'+cubeFmtE(c.uvp)+'</td>' +
-      '<td style="'+td+'">' +
-        '<div style="font-weight:600;color:#185FA5;font-size:12px;">'+(c.cheapestShop||'—')+'</div>' +
-        '<div style="font-size:11px;color:#888;">'+c.shops.length+' Shops</div>' +
-      '</td>' +
+      (function(){
+        var shopCount = c.shops ? c.shops.length : 0;
+        var rowId = 'sr_' + c.key.replace(/\W/g,'_').substring(0,30);
+        var shopPrices = {};
+        if (c.marketPrices) {
+          c.marketPrices.forEach(function(mp) {
+            if (!mp.shop) return;
+            if (!shopPrices[mp.shop] || mp.price < shopPrices[mp.shop]) shopPrices[mp.shop] = mp.price;
+          });
+        }
+        var shopKeys = Object.keys(shopPrices).sort(function(a,b){ return shopPrices[a]-shopPrices[b]; });
+        var hasMore = shopKeys.length > 1;
+        var toggleBtn = hasMore ? '<span onclick="cubeToggleShops(\'' + rowId + '\')" style="cursor:pointer;font-size:10px;color:#185FA5;margin-left:6px;">▼ alle</span>' : '';
+        var shopList = '<div id="' + rowId + '" style="display:none;margin-top:5px;border-top:0.5px solid #eee;padding-top:4px;">'
+          + shopKeys.map(function(sh) {
+              var isCh = sh === c.cheapestShop;
+              return '<div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;padding:2px 0;">'
+                + '<span style="color:' + (isCh ? '#c0392b' : '#555') + ';">' + sh + '</span>'
+                + '<span style="font-family:monospace;font-weight:' + (isCh ? '700' : '400') + ';">' + shopPrices[sh].toFixed(2) + ' €</span>'
+                + '</div>';
+            }).join('')
+          + '</div>';
+        var td2 = 'padding:7px 12px;vertical-align:top;border-bottom:0.5px solid #e8e6e0;font-size:13px;';
+        return '<td style="' + td2 + '">'
+          + '<div style="font-weight:600;color:#185FA5;font-size:12px;">' + (c.cheapestShop || '—') + toggleBtn + '</div>'
+          + '<div style="font-size:11px;color:#888;">' + shopCount + ' Shop' + (shopCount !== 1 ? 's' : '') + '</div>'
+          + (hasMore ? shopList : '')
+          + '</td>';
+      })() +
       '</tr>';
   }).join('');
 
@@ -3339,6 +3385,23 @@ function loadMasterfeed() {
       console.log('Masterfeed geladen:', Object.keys(masterfeedData).length, 'Produkte');
       // Enrich existing table data if already loaded
       if (DATA.table && DATA.table.length) enrichTableWithMasterfeed();
+      // Re-render cube with enriched names
+      if (typeof allClusters !== 'undefined' && allClusters && allClusters.length) {
+        allClusters.forEach(function(c) {
+          if (c.skus && c.skus.length) {
+            for (var si = 0; si < c.skus.length; si++) {
+              var feed = masterfeedData[c.skus[si]];
+              if (feed && feed.name) { c.name = feed.name; break; }
+            }
+          }
+          c.name = c.name.replace(/^cube\s+/i, '').trim();
+        });
+        if (typeof filteredClusters !== 'undefined' && filteredClusters && filteredClusters.length) {
+          filteredClusters.forEach(function(c) { c.name = c.name.replace(/^cube\s+/i, '').trim(); });
+          cubeRenderTable(filteredClusters);
+          cubeRenderInsights(filteredClusters);
+        }
+      }
       populateCatFilters();
     })
     .catch(function(e) { console.warn('Masterfeed konnte nicht geladen werden:', e); });
@@ -3414,6 +3477,35 @@ var activeCatFilters = { cat1:'', cat2:'', cat3:'', cat4:'' };
 function applyCatFilter(n, val) {
   activeCatFilters['cat'+n] = val;
   normalApplyFilters();
+}
+
+function cubeToggleShops(rowId) {
+  var el = document.getElementById(rowId);
+  if (!el) return;
+  var btn = el.previousElementSibling ? el.previousElementSibling.querySelector('span[onclick]') : null;
+  // Find the toggle button - it's in the parent td
+  var td = el.parentElement;
+  var toggleSpan = td ? td.querySelector('span[onclick]') : null;
+  if (el.style.display === 'none') {
+    el.style.display = 'block';
+    if (toggleSpan) toggleSpan.textContent = '▲ weniger';
+  } else {
+    el.style.display = 'none';
+    if (toggleSpan) toggleSpan.textContent = '▼ alle';
+  }
+}
+
+function cubeToggleShops(rowId) {
+  var el = document.getElementById(rowId);
+  if (!el) return;
+  var isOpen = el.style.display !== 'none';
+  el.style.display = isOpen ? 'none' : 'block';
+  // Update toggle button text
+  var td = el.parentElement;
+  if (td) {
+    var span = td.querySelector('span[onclick]');
+    if (span) span.textContent = isOpen ? '▼ alle' : '▲ weniger';
+  }
 }
 
 
