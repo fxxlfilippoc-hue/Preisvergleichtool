@@ -3406,7 +3406,9 @@ function loadMasterfeed() {
       masterfeedCat3 = Object.keys(cat3s).sort();
       masterfeedCat4 = Object.keys(cat4s).sort();
       masterfeedLoaded = true;
-      console.log('Masterfeed geladen:', Object.keys(masterfeedData).length, 'Produkte');
+      var mfCount = Object.keys(masterfeedData).length;
+      console.log('Masterfeed geladen:', mfCount, 'Produkte');
+      showToast('Masterfeed geladen: ' + mfCount + ' Produkte', false);
       // Enrich existing table data if already loaded
       if (DATA.table && DATA.table.length) enrichTableWithMasterfeed();
       // Debug: check SKU matching
@@ -3449,7 +3451,10 @@ function loadMasterfeed() {
       }
       populateCatFilters();
     })
-    .catch(function(e) { console.warn('Masterfeed konnte nicht geladen werden:', e); });
+    .catch(function(e) { 
+      console.warn('Masterfeed konnte nicht geladen werden:', e);
+      showToast('Masterfeed Fehler: ' + e.message, true);
+    });
 }
 
 // CSV parser for pipe-separated files
