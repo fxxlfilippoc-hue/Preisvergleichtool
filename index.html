@@ -2366,7 +2366,9 @@ function cubeApplyFilters(){
       if (masterfeedData[s.toUpperCase()]) _matched++;
     });
   });
-  showToast('Cube SKU Matches: ' + _matched + '/' + _total + ' (MF geladen: ' + masterfeedLoaded + ')', false);
+  var _mfSample = Object.keys(masterfeedData).slice(0,3).join(', ');
+  var _cubeSample = allClusters.length ? allClusters[0].skus.slice(0,2).join(', ') : 'keine';
+  showToast('MF SKUs: ' + _mfSample + ' | Cube SKUs: ' + _cubeSample, false);
 
   // Enrich cluster names from masterfeed + remove "Cube" prefix
   allClusters.forEach(function(c) {
