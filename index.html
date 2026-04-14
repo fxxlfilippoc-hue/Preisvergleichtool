@@ -2762,33 +2762,44 @@ function cubeRenderTable(src){
       (function(){
         var td2 = 'padding:7px 12px;vertical-align:top;border-bottom:0.5px solid #e8e6e0;font-size:13px;';
         var shopCount = c.shops ? c.shops.length : 0;
-        // Build shop→minPrice map directly from marketPrices
-        var sp = {};
-        (c.marketPrices||[]).forEach(function(mp){
-          if(!mp||!mp.shop) return;
-          var p = parseFloat(mp.price);
-          if(isNaN(p)) return;
-          if(sp[mp.shop]===undefined || p < sp[mp.shop]) sp[mp.shop] = p;
-        });
-        // Sort shops by price ascending
-        var keys = Object.keys(sp).sort(function(a,b){ return sp[a]-sp[b]; });
         var hasMore = shopCount > 1;
         var rowId = 'sr'+(++window._cubeRowIdx);
-        var listHtml = keys.map(function(sh){
-          var isCh = (sh===c.cheapestShop);
-          var priceFormatted = sp[sh].toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
-          return '<div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;padding:2px 0;">'
-            +'<span style="color:'+(isCh?'#c0392b':'#555')+';">'+sh+'</span>'
-            +'<span style="font-family:monospace;font-weight:'+(isCh?'700':'400')+';">'+priceFormatted+'</span>'
-            +'</div>';
-        }).join('');
+        var mp = c.marketPrices || [];
+        var sp = {};
+        for (var mi = 0; mi < mp.length; mi++) {
+          var entry = mp[mi];
+          if (!entry || !entry.shop) continue;
+          var p = parseFloat(String(entry.price).replace(',','.'));
+          if (isNaN(p)) continue;
+          if (sp[entry.shop] === undefined || p < sp[entry.shop]) sp[entry.shop] = p;
+        }
+        var keys = Object.keys(sp);
+        keys.sort(function(a,b){ return sp[a]-sp[b]; });
+        // fallback: if no prices found, show shops from c.shops without price
+        if (keys.length === 0 && c.shops) {
+          for (var si=0; si<c.shops.length; si++) sp[c.shops[si]] = null;
+          keys = c.shops.slice();
+        }
+        var listHtml = '';
+        for (var ki=0; ki<keys.length; ki++) {
+          var sh = keys[ki];
+          var isCh = (sh === c.cheapestShop);
+          var pVal = sp[sh];
+          var pStr = (pVal !== null && pVal !== undefined)
+            ? pVal.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+'\u00a0\u20ac'
+            : '\u2014';
+          listHtml += '<div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;padding:2px 0;">'
+            + '<span style="color:'+(isCh?'#c0392b':'#555')+';">'+sh+'</span>'
+            + '<span style="font-family:monospace;font-weight:'+(isCh?'700':'400')+';">'+pStr+'</span>'
+            + '</div>';
+        }
         return '<td style="'+td2+'">'
-          +'<div style="font-weight:600;color:#185FA5;font-size:12px;">'+(c.cheapestShop||'—')
-          +(hasMore?' <span id="btn_'+rowId+'" onclick="cubeShopToggle(\''+rowId+'\')" style="cursor:pointer;font-size:10px;color:#185FA5;font-weight:600;">&#9660; alle</span>':'')
-          +'</div>'
-          +'<div style="font-size:11px;color:#888;">'+shopCount+' Shop'+(shopCount!==1?'s':'')+'</div>'
-          +(hasMore?'<div id="'+rowId+'" style="display:none;margin-top:5px;border-top:1px solid #eee;padding-top:4px;">'+listHtml+'</div>':'')
-          +'</td>';
+          + '<div style="font-weight:600;color:#185FA5;font-size:12px;">'+(c.cheapestShop||'\u2014')
+          + (hasMore ? ' <span id="btn_'+rowId+'" onclick="cubeShopToggle(\''+rowId+'\')" style="cursor:pointer;font-size:10px;color:#185FA5;font-weight:600;">\u25bc alle</span>' : '')
+          + '</div>'
+          + '<div style="font-size:11px;color:#888;">'+shopCount+' Shop'+(shopCount!==1?'s':'')+'</div>'
+          + (hasMore ? '<div id="'+rowId+'" style="display:none;margin-top:5px;border-top:1px solid #eee;padding-top:4px;">'+listHtml+'</div>' : '')
+          + '</td>';
       })() +
       '</tr>';
   }).join('');
@@ -3680,6 +3691,8 @@ function applyCatFilter(n, val) {
 window._cubeRowIdx = 0;
 
 function cubeShopToggle(rowId) {
+  // Debug: log what we find
+  console.log('Toggle:', rowId, 'el:', document.getElementById(rowId));
   var el = document.getElementById(rowId);
   var btn = document.getElementById('btn_' + rowId);
   if (!el || !btn) return;
