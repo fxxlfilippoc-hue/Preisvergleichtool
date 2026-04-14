@@ -2760,7 +2760,7 @@ function cubeRenderTable(src){
       })() +
       (function(){
         var shopCount = c.shops ? c.shops.length : 0;
-        var rowId = 'sr_' + c.key.replace(/\W/g,'_').substring(0,30);
+        var rowId = 'sr' + (++window._cubeRowIdx);
         var shopPrices = {};
         if (c.marketPrices) {
           c.marketPrices.forEach(function(mp) {
@@ -2770,21 +2770,20 @@ function cubeRenderTable(src){
         }
         var shopKeys = Object.keys(shopPrices).sort(function(a,b){ return shopPrices[a]-shopPrices[b]; });
         var hasMore = shopKeys.length > 1;
-        var toggleBtn = hasMore ? '<span data-sr="' + rowId + '" onclick="cubeToggleShops(this)" style="cursor:pointer;font-size:10px;color:#185FA5;margin-left:6px;">▼ alle</span>' : '';
-        var shopList = '<div id="' + rowId + '" style="display:none;margin-top:5px;border-top:0.5px solid #eee;padding-top:4px;">'
-          + shopKeys.map(function(sh) {
-              var isCh = sh === c.cheapestShop;
-              return '<div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;padding:2px 0;">'
-                + '<span style="color:' + (isCh ? '#c0392b' : '#555') + ';">' + sh + '</span>'
-                + '<span style="font-family:monospace;font-weight:' + (isCh ? '700' : '400') + ';">' + shopPrices[sh].toFixed(2) + ' €</span>'
-                + '</div>';
-            }).join('')
-          + '</div>';
+        var shopListHtml = shopKeys.map(function(sh) {
+          var isCh = sh === c.cheapestShop;
+          return '<div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;padding:2px 0;">'
+            + '<span style="color:' + (isCh ? '#c0392b' : '#555') + ';">' + sh + '</span>'
+            + '<span style="font-family:monospace;font-weight:' + (isCh ? '700' : '400') + ';">' + shopPrices[sh].toFixed(2) + ' €</span>'
+            + '</div>';
+        }).join('');
         var td2 = 'padding:7px 12px;vertical-align:top;border-bottom:0.5px solid #e8e6e0;font-size:13px;';
         return '<td style="' + td2 + '">'
-          + '<div style="font-weight:600;color:#185FA5;font-size:12px;">' + (c.cheapestShop || '—') + toggleBtn + '</div>'
+          + '<div style="font-weight:600;color:#185FA5;font-size:12px;">' + (c.cheapestShop || '—')
+          + (hasMore ? ' <span class="cube-shop-toggle" data-rid="' + rowId + '" style="cursor:pointer;font-size:10px;">▼ alle</span>' : '')
+          + '</div>'
           + '<div style="font-size:11px;color:#888;">' + shopCount + ' Shop' + (shopCount !== 1 ? 's' : '') + '</div>'
-          + (hasMore ? shopList : '')
+          + (hasMore ? '<div id="' + rowId + '" style="display:none;margin-top:5px;border-top:0.5px solid #eee;padding-top:4px;">' + shopListHtml + '</div>' : '')
           + '</td>';
       })() +
       '</tr>';
@@ -3673,6 +3672,21 @@ function applyCatFilter(n, val) {
   activeCatFilters['cat'+n] = val;
   normalApplyFilters();
 }
+
+window._cubeRowIdx = 0;
+
+// Event delegation for shop toggles
+document.addEventListener('click', function(e) {
+  var btn = e.target;
+  if (!btn.classList.contains('cube-shop-toggle')) return;
+  var rowId = btn.getAttribute('data-rid');
+  if (!rowId) return;
+  var el = document.getElementById(rowId);
+  if (!el) return;
+  var isOpen = el.style.display !== 'none';
+  el.style.display = isOpen ? 'none' : 'block';
+  btn.textContent = isOpen ? '▼ alle' : '▲ weniger';
+});
 
 function cubeToggleShops(btn) {
   var rowId = btn.getAttribute('data-sr');
