@@ -939,7 +939,7 @@
       </div>
       <div style="display:flex;align-items:center;gap:10px;">
         <button onclick="downloadNormalExcel()" style="font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;padding:5px 12px;border-radius:var(--radius);border:0.5px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;">⬇ Excel</button>
-        <input class="search-input" type="text" id="searchInputDupe" placeholder="Suche Artikel…" oninput="document.getElementById('searchInput').value=this.value;normalApplyFilters();">
+        <input class="search-input" type="text" id="searchInput" placeholder="Suche Artikel…">
         <div class="filter-pills" id="filterPills">
           <button class="pill active" data-filter="all" onclick="filterTable(this,\'all\')">Alle</button>
         </div>
@@ -1605,6 +1605,7 @@ function updateDashboard(rows) {
         sku:               sku,
         name:              r['Artikelbezeichnung'] || prod['name'] || '',
         brand:             r['Marke'] || prod['brand'] || '',
+        model:             r['Benutzerdefiniert'] || prod['model'] || '',
         warengruppe:       (r['Benutzerdefiniert'] || '').trim(),
         my_price:          myPrice,
         cheapest_price:    cheapPrice,
@@ -1826,6 +1827,7 @@ function renderTable() {
       '<td style="'+td+'max-width:200px;">' +
         '<div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+r.name+'">'+r.name+'</div>' +
         '<div style="font-size:11px;color:#888;">'+(r.brand||'')+'</div>' +
+        ((r.model||r.warengruppe) ? '<div style="font-size:10px;color:#aaa;font-family:monospace;">'+(r.model||r.warengruppe)+'</div>' : '') +
       '</td>' +
       '<td style="'+td+'text-align:center;">' +
         (season ? '<span style="background:#EBF3FC;color:#185FA5;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;">'+season+'</span>' : '<span style="color:#ccc;">—</span>') +
@@ -3649,6 +3651,7 @@ function enrichTableWithMasterfeed() {
     if (!feed) return;
     // Enrich with masterfeed data
     row.qty            = feed.qty;
+    row.model          = feed.model || row.model || '';
     row.cat1           = feed.cat1;
     row.cat2           = feed.cat2;
     row.cat3           = feed.cat3;
