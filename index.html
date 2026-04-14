@@ -1480,10 +1480,16 @@ function onSourceChange(source) {
           });
         }
       } else {
-        if (masterfeedLoaded) enrichTableWithMasterfeed();
-        else loadMasterfeed();
+        if (masterfeedLoaded) {
+          enrichTableWithMasterfeed();
+          populateCatFilters();
+        } else {
+          loadMasterfeed().then(function() {
+            enrichTableWithMasterfeed();
+            populateCatFilters();
+          });
+        }
       }
-      populateCatFilters();
       stratUpdateTableBtn();
       // Auto-apply strategy if rules exist for this source
       var rules = stratData[source] || [];
