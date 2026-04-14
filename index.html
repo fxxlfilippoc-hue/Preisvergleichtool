@@ -939,7 +939,7 @@
       </div>
       <div style="display:flex;align-items:center;gap:10px;">
         <button onclick="downloadNormalExcel()" style="font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;padding:5px 12px;border-radius:var(--radius);border:0.5px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;">⬇ Excel</button>
-        <input class="search-input" type="text" id="searchInput" placeholder="Suche Artikel…">
+        <input class="search-input" type="text" id="searchInputDupe" placeholder="Suche Artikel…" oninput="document.getElementById('searchInput').value=this.value;normalApplyFilters();">
         <div class="filter-pills" id="filterPills">
           <button class="pill active" data-filter="all" onclick="filterTable(this,\'all\')">Alle</button>
         </div>
