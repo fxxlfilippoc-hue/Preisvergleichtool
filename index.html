@@ -2712,6 +2712,7 @@ function cubeRenderTable(src){
     thead.appendChild(th);
   });
 
+  window._cubeRowIdx = 0;
   document.getElementById('cubeTableBody').innerHTML=page.map(function(c){
     var idx=c.priceIndex;
     var idxColor=idx?idx>105?'#c0392b':idx<97?'#1a7a3f':'var(--text)':'';
@@ -2769,7 +2770,7 @@ function cubeRenderTable(src){
           });
         }
         var shopKeys = Object.keys(shopPrices).sort(function(a,b){ return shopPrices[a]-shopPrices[b]; });
-        var hasMore = shopKeys.length > 1;
+        var hasMore = shopCount > 1;
         var shopListHtml = shopKeys.map(function(sh) {
           var isCh = sh === c.cheapestShop;
           return '<div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;padding:2px 0;">'
@@ -2780,7 +2781,7 @@ function cubeRenderTable(src){
         var td2 = 'padding:7px 12px;vertical-align:top;border-bottom:0.5px solid #e8e6e0;font-size:13px;';
         return '<td style="' + td2 + '">'
           + '<div style="font-weight:600;color:#185FA5;font-size:12px;">' + (c.cheapestShop || '—')
-          + (hasMore ? ' <span class="cube-shop-toggle" data-rid="' + rowId + '" style="cursor:pointer;font-size:10px;">▼ alle</span>' : '')
+          + (hasMore ? ' <span class="cube-shop-toggle" data-rid="' + rowId + '" style="cursor:pointer;font-size:10px;color:#185FA5;font-weight:600;">▼ alle</span>' : '')
           + '</div>'
           + '<div style="font-size:11px;color:#888;">' + shopCount + ' Shop' + (shopCount !== 1 ? 's' : '') + '</div>'
           + (hasMore ? '<div id="' + rowId + '" style="display:none;margin-top:5px;border-top:0.5px solid #eee;padding-top:4px;">' + shopListHtml + '</div>' : '')
