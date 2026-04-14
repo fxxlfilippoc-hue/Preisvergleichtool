@@ -2762,6 +2762,7 @@ function cubeRenderTable(src){
       (function(){
         var shopCount = c.shops ? c.shops.length : 0;
         var rowId = 'sr' + (++window._cubeRowIdx);
+        // Build price list from marketPrices (one entry per SKU = cheapest shop for that SKU)
         var shopPrices = {};
         if (c.marketPrices) {
           c.marketPrices.forEach(function(mp) {
@@ -2769,20 +2770,29 @@ function cubeRenderTable(src){
             if (!shopPrices[mp.shop] || mp.price < shopPrices[mp.shop]) shopPrices[mp.shop] = mp.price;
           });
         }
-        var shopKeys = Object.keys(shopPrices).sort(function(a,b){ return shopPrices[a]-shopPrices[b]; });
+        // Also add any shops from c.shops that have no price yet
+        if (c.shops) {
+          c.shops.forEach(function(sh) {
+            if (!shopPrices[sh]) shopPrices[sh] = null;
+          });
+        }
+        var shopKeys = Object.keys(shopPrices).sort(function(a,b){
+          var pa = shopPrices[a]||9999, pb = shopPrices[b]||9999;
+          return pa - pb;
+        });
         var hasMore = shopCount > 1;
         var shopListHtml = shopKeys.map(function(sh) {
           var isCh = sh === c.cheapestShop;
+          var priceStr = shopPrices[sh] !== null ? shopPrices[sh].toFixed(2)+' €' : '—';
           return '<div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;padding:2px 0;">'
             + '<span style="color:' + (isCh ? '#c0392b' : '#555') + ';">' + sh + '</span>'
-            + '<span style="font-family:monospace;font-weight:' + (isCh ? '700' : '400') + ';">' + shopPrices[sh].toFixed(2) + ' €</span>'
+            + '<span style="font-family:monospace;font-weight:' + (isCh ? '700' : '400') + ';">' + priceStr + '</span>'
             + '</div>';
         }).join('');
         var td2 = 'padding:7px 12px;vertical-align:top;border-bottom:0.5px solid #e8e6e0;font-size:13px;';
-        var toggleFn = hasMore ? 'cubeShopToggle(\''+rowId+'\')' : '';
         return '<td style="' + td2 + '">'
           + '<div style="font-weight:600;color:#185FA5;font-size:12px;">' + (c.cheapestShop || '—')
-          + (hasMore ? ' <span id="btn_'+rowId+'" onclick="'+toggleFn+'" style="cursor:pointer;font-size:10px;color:#185FA5;font-weight:600;">▼ alle</span>' : '')
+          + (hasMore ? ' <span id="btn_'+rowId+'" onclick="cubeShopToggle(\'' + rowId + '\')" style="cursor:pointer;font-size:10px;color:#185FA5;font-weight:600;">▼ alle</span>' : '')
           + '</div>'
           + '<div style="font-size:11px;color:#888;">' + shopCount + ' Shop' + (shopCount !== 1 ? 's' : '') + '</div>'
           + (hasMore ? '<div id="' + rowId + '" style="display:none;margin-top:5px;border-top:0.5px solid #eee;padding-top:4px;">' + shopListHtml + '</div>' : '')
