@@ -2760,47 +2760,35 @@ function cubeRenderTable(src){
         return '<td style="'+td3+'font-weight:600;color:'+qClr+';">'+qty+'</td>';
       })() +
       (function(){
-        var shopCount = c.shops ? c.shops.length : 0;
-        var rowId = 'sr' + (++window._cubeRowIdx);
-        // Build price list from marketPrices (one entry per SKU = cheapest shop for that SKU)
-        var shopPrices = {};
-        if (c.marketPrices) {
-          c.marketPrices.forEach(function(mp) {
-            if (!mp.shop) return;
-            if (!shopPrices[mp.shop] || mp.price < shopPrices[mp.shop]) shopPrices[mp.shop] = mp.price;
-          });
-        }
-        // Ensure all shops from c.shops appear, fill missing with null
-        if (c.shops) {
-          c.shops.forEach(function(sh) {
-            if (!(sh in shopPrices)) shopPrices[sh] = null;
-          });
-        }
-        var shopKeys = Object.keys(shopPrices).sort(function(a,b){
-          var pa = shopPrices[a]!==null ? shopPrices[a] : 9999;
-          var pb = shopPrices[b]!==null ? shopPrices[b] : 9999;
-          return pa - pb;
-        });
-        var hasMore = shopCount > 1;
-        var shopListHtml = shopKeys.map(function(sh) {
-          var isCh = sh === c.cheapestShop;
-          var pVal = shopPrices[sh];
-          var priceStr = (pVal !== null && pVal !== undefined && !isNaN(Number(pVal))) 
-            ? Number(pVal).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' €' 
-            : '—';
-          return '<div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;padding:2px 0;">'
-            + '<span style="color:' + (isCh ? '#c0392b' : '#555') + ';">' + sh + '</span>'
-            + '<span style="font-family:monospace;font-weight:' + (isCh ? '700' : '400') + ';">' + priceStr + '</span>'
-            + '</div>';
-        }).join('');
         var td2 = 'padding:7px 12px;vertical-align:top;border-bottom:0.5px solid #e8e6e0;font-size:13px;';
-        return '<td style="' + td2 + '">'
-          + '<div style="font-weight:600;color:#185FA5;font-size:12px;">' + (c.cheapestShop || '—')
-          + (hasMore ? ' <span id="btn_'+rowId+'" onclick="cubeShopToggle(\'' + rowId + '\')" style="cursor:pointer;font-size:10px;color:#185FA5;font-weight:600;">▼ alle</span>' : '')
-          + '</div>'
-          + '<div style="font-size:11px;color:#888;">' + shopCount + ' Shop' + (shopCount !== 1 ? 's' : '') + '</div>'
-          + (hasMore ? '<div id="' + rowId + '" style="display:none;margin-top:5px;border-top:0.5px solid #eee;padding-top:4px;">' + shopListHtml + '</div>' : '')
-          + '</td>';
+        var shopCount = c.shops ? c.shops.length : 0;
+        // Build shop→minPrice map directly from marketPrices
+        var sp = {};
+        (c.marketPrices||[]).forEach(function(mp){
+          if(!mp||!mp.shop) return;
+          var p = parseFloat(mp.price);
+          if(isNaN(p)) return;
+          if(sp[mp.shop]===undefined || p < sp[mp.shop]) sp[mp.shop] = p;
+        });
+        // Sort shops by price ascending
+        var keys = Object.keys(sp).sort(function(a,b){ return sp[a]-sp[b]; });
+        var hasMore = shopCount > 1;
+        var rowId = 'sr'+(++window._cubeRowIdx);
+        var listHtml = keys.map(function(sh){
+          var isCh = (sh===c.cheapestShop);
+          var priceFormatted = sp[sh].toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
+          return '<div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;padding:2px 0;">'
+            +'<span style="color:'+(isCh?'#c0392b':'#555')+';">'+sh+'</span>'
+            +'<span style="font-family:monospace;font-weight:'+(isCh?'700':'400')+';">'+priceFormatted+'</span>'
+            +'</div>';
+        }).join('');
+        return '<td style="'+td2+'">'
+          +'<div style="font-weight:600;color:#185FA5;font-size:12px;">'+(c.cheapestShop||'—')
+          +(hasMore?' <span id="btn_'+rowId+'" onclick="cubeShopToggle(\''+rowId+'\')" style="cursor:pointer;font-size:10px;color:#185FA5;font-weight:600;">&#9660; alle</span>':'')
+          +'</div>'
+          +'<div style="font-size:11px;color:#888;">'+shopCount+' Shop'+(shopCount!==1?'s':'')+'</div>'
+          +(hasMore?'<div id="'+rowId+'" style="display:none;margin-top:5px;border-top:1px solid #eee;padding-top:4px;">'+listHtml+'</div>':'')
+          +'</td>';
       })() +
       '</tr>';
   }).join('');
