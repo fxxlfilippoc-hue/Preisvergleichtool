@@ -3548,10 +3548,18 @@ function loadMasterfeed() {
         if (r['cat3']||r['Cat3']) cat3s[r['cat3']||r['Cat3']] = 1;
         if (r['cat4']||r['Cat4']) cat4s[r['cat4']||r['Cat4']] = 1;
       });
-      masterfeedCat1 = Object.keys(cat1s).sort();
-      masterfeedCat2 = Object.keys(cat2s).sort();
-      masterfeedCat3 = Object.keys(cat3s).sort();
-      masterfeedCat4 = Object.keys(cat4s).sort();
+      // Build cat lists directly from masterfeedData (avoids CSV column name issues)
+      var _cat1s={}, _cat2s={}, _cat3s={}, _cat4s={};
+      Object.values(masterfeedData).forEach(function(m){
+        if(m.cat1) _cat1s[m.cat1]=1;
+        if(m.cat2) _cat2s[m.cat2]=1;
+        if(m.cat3) _cat3s[m.cat3]=1;
+        if(m.cat4) _cat4s[m.cat4]=1;
+      });
+      masterfeedCat1 = Object.keys(_cat1s).sort();
+      masterfeedCat2 = Object.keys(_cat2s).sort();
+      masterfeedCat3 = Object.keys(_cat3s).sort();
+      masterfeedCat4 = Object.keys(_cat4s).sort();
       masterfeedLoaded = true;
       var mfKeys = Object.keys(masterfeedData);
       console.log('[Masterfeed] Geladen:', mfKeys.length, 'Produkte');
