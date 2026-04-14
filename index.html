@@ -2779,9 +2779,10 @@ function cubeRenderTable(src){
             + '</div>';
         }).join('');
         var td2 = 'padding:7px 12px;vertical-align:top;border-bottom:0.5px solid #e8e6e0;font-size:13px;';
+        var toggleFn = hasMore ? 'cubeShopToggle(\''+rowId+'\')' : '';
         return '<td style="' + td2 + '">'
           + '<div style="font-weight:600;color:#185FA5;font-size:12px;">' + (c.cheapestShop || '—')
-          + (hasMore ? ' <span class="cube-shop-toggle" data-rid="' + rowId + '" style="cursor:pointer;font-size:10px;color:#185FA5;font-weight:600;">▼ alle</span>' : '')
+          + (hasMore ? ' <span id="btn_'+rowId+'" onclick="'+toggleFn+'" style="cursor:pointer;font-size:10px;color:#185FA5;font-weight:600;">▼ alle</span>' : '')
           + '</div>'
           + '<div style="font-size:11px;color:#888;">' + shopCount + ' Shop' + (shopCount !== 1 ? 's' : '') + '</div>'
           + (hasMore ? '<div id="' + rowId + '" style="display:none;margin-top:5px;border-top:0.5px solid #eee;padding-top:4px;">' + shopListHtml + '</div>' : '')
@@ -3676,18 +3677,14 @@ function applyCatFilter(n, val) {
 
 window._cubeRowIdx = 0;
 
-// Event delegation for shop toggles
-document.addEventListener('click', function(e) {
-  var btn = e.target;
-  if (!btn.classList.contains('cube-shop-toggle')) return;
-  var rowId = btn.getAttribute('data-rid');
-  if (!rowId) return;
+function cubeShopToggle(rowId) {
   var el = document.getElementById(rowId);
-  if (!el) return;
+  var btn = document.getElementById('btn_' + rowId);
+  if (!el || !btn) return;
   var isOpen = el.style.display !== 'none';
   el.style.display = isOpen ? 'none' : 'block';
   btn.textContent = isOpen ? '▼ alle' : '▲ weniger';
-});
+}
 
 function cubeToggleShops(btn) {
   var rowId = btn.getAttribute('data-sr');
