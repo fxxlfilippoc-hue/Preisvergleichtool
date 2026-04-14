@@ -2784,7 +2784,10 @@ function cubeRenderTable(src){
         var hasMore = shopCount > 1;
         var shopListHtml = shopKeys.map(function(sh) {
           var isCh = sh === c.cheapestShop;
-          var priceStr = (shopPrices[sh] !== null && shopPrices[sh] !== undefined) ? shopPrices[sh].toFixed(2)+' €' : '—';
+          var pVal = shopPrices[sh];
+          var priceStr = (pVal !== null && pVal !== undefined && !isNaN(Number(pVal))) 
+            ? Number(pVal).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' €' 
+            : '—';
           return '<div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;padding:2px 0;">'
             + '<span style="color:' + (isCh ? '#c0392b' : '#555') + ';">' + sh + '</span>'
             + '<span style="font-family:monospace;font-weight:' + (isCh ? '700' : '400') + ';">' + priceStr + '</span>'
