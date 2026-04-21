@@ -1711,6 +1711,7 @@ function updateDashboard(rows) {
   currentFilter = 'all';
   // Filter zurücksetzen bei Quellenwechsel
   searchTerm = ''; normalShop = ''; normalPos = ''; normalDiff = ''; normalStatusFilter = '';
+  activeCatFilters = { cat1:'', cat2:'', cat3:'', cat4:'' };
   var si = document.getElementById('searchInput');
   var sf = document.getElementById('normalShopFilter');
   var pf = document.getElementById('normalPosFilter');
@@ -1790,6 +1791,11 @@ function getFilteredData() {
       if (normalStatusFilter === 'teuer' && (idx === null || idx <= 105)) return false;
       if (normalStatusFilter === 'ok'    && (idx === null || idx < 97 || idx > 105)) return false;
     }
+    // Cat Filter
+    if (activeCatFilters.cat1 && r.cat1 !== activeCatFilters.cat1) return false;
+    if (activeCatFilters.cat2 && r.cat2 !== activeCatFilters.cat2) return false;
+    if (activeCatFilters.cat3 && r.cat3 !== activeCatFilters.cat3) return false;
+    if (activeCatFilters.cat4 && r.cat4 !== activeCatFilters.cat4) return false;
     return true;
   });
 }
@@ -3689,15 +3695,23 @@ function enrichTableWithMasterfeed() {
   });
 }
 
-// Populate Cat filter dropdowns
+// Populate Cat filter dropdowns — nur Werte die in DATA.table vorhanden sind
 function populateCatFilters() {
+  // Sammle distincte Werte aus der aktuell geladenen Tabelle
+  var vals = { cat1: {}, cat2: {}, cat3: {}, cat4: {} };
+  (DATA.table || []).forEach(function(r) {
+    if (r.cat1) vals.cat1[r.cat1] = 1;
+    if (r.cat2) vals.cat2[r.cat2] = 1;
+    if (r.cat3) vals.cat3[r.cat3] = 1;
+    if (r.cat4) vals.cat4[r.cat4] = 1;
+  });
   ['1','2','3','4'].forEach(function(n) {
     var sel = document.getElementById('catFilter' + n);
     if (!sel) return;
-    var cats = n==='1'?masterfeedCat1:n==='2'?masterfeedCat2:n==='3'?masterfeedCat3:masterfeedCat4;
     var cur = sel.value;
+    var list = Object.keys(vals['cat'+n]).sort();
     sel.innerHTML = '<option value="">Alle</option>';
-    cats.forEach(function(c) {
+    list.forEach(function(c) {
       var o = document.createElement('option');
       o.value = c; o.textContent = c;
       if (c === cur) o.selected = true;
