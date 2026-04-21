@@ -2077,13 +2077,13 @@ function renderNormalKPIs(rows) {
   var el = document.getElementById('normalKpiRow');
   if (!el) return;
 
-  var total     = DATA.table.length;  // ungefiltert
+  var total     = rows.length;
   var withComp  = rows.filter(function(r){ return !isNaN(r.cheapest_price) && r.cheapest_price > 0; }).length;
-  var pos1      = DATA.table.filter(function(r){ return r.position === 1; }).length;
+  var pos1      = rows.filter(function(r){ return r.position === 1; }).length;
   var pos1pct   = total > 0 ? pos1 / total * 100 : 0;
 
   // Preisindex: Ø (Mein Preis / Günstigster Preis * 100) für Artikel mit Konkurrenz
-  var idxVals = DATA.table.filter(function(r){
+  var idxVals = rows.filter(function(r){
     return !isNaN(r.my_price) && !isNaN(r.cheapest_price) && r.cheapest_price > 0;
   }).map(function(r){ return r.my_price / r.cheapest_price * 100; });
   var avgIdx = idxVals.length > 0 ? idxVals.reduce(function(a,b){return a+b;},0) / idxVals.length : null;
@@ -2096,7 +2096,7 @@ function renderNormalKPIs(rows) {
   var n        = idxVals.length || 1;
 
   // Ø Differenz (nur positive = wir sind teurer)
-  var posDiffs = DATA.table.filter(function(r){ return r.diff > 0; }).map(function(r){ return r.diff; });
+  var posDiffs = rows.filter(function(r){ return r.diff > 0; }).map(function(r){ return r.diff; });
   var avgDiff  = posDiffs.length > 0 ? posDiffs.reduce(function(a,b){return a+b;},0)/posDiffs.length : 0;
 
   el.innerHTML = '';
