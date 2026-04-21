@@ -3536,6 +3536,13 @@ function loadMasterfeed() {
       }
       masterfeedData = {};
       var cat1s = {}, cat2s = {}, cat3s = {}, cat4s = {};
+      // Validierung: Cat-Wert ist gültig wenn kein '>'-Pfad, keine Zahl am Anfang, nicht zu lang
+      function validCat(v) {
+        if (!v) return '';
+        v = v.trim();
+        if (!v || v.indexOf('>') >= 0 || /^\d/.test(v) || v.length > 60) return '';
+        return v;
+      }
       rows.forEach(function(r) {
         var sku = (r['sku'] || r['SKU'] || '').trim().toUpperCase();
         if (!sku) return;
@@ -3546,10 +3553,10 @@ function loadMasterfeed() {
           qty:            parseInt(r['qty']) || 0,
           uvp:            parseFloat(r['price']) || 0,
           my_price_feed:  parseFloat(r['special_price']) || 0,
-          cat1:           r['cat1'] || r['Cat1'] || '',
-          cat2:           r['cat2'] || r['Cat2'] || '',
-          cat3:           r['cat3'] || r['Cat3'] || '',
-          cat4:           r['cat4'] || r['Cat4'] || '',
+          cat1:           validCat(r['cat1'] || r['Cat1']),
+          cat2:           validCat(r['cat2'] || r['Cat2']),
+          cat3:           validCat(r['cat3'] || r['Cat3']),
+          cat4:           validCat(r['cat4'] || r['Cat4']),
           hauptwg:        r['Hauptwarengruppe'] || '',
           saison:         r['Saison'] || '',
           geschlecht:     r['Geschlecht'] || '',
