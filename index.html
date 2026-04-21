@@ -1512,10 +1512,12 @@ function onSourceChange(source) {
         if (masterfeedLoaded) {
           enrichTableWithMasterfeed();
           populateCatFilters();
+          renderTable();
         } else {
           loadMasterfeed().then(function() {
             enrichTableWithMasterfeed();
             populateCatFilters();
+            renderTable();
           });
         }
       }
@@ -1925,7 +1927,7 @@ function renderTable() {
       '<td style="'+mono+'color:#888;">'+uvpStr+'</td>' +
       (function(){
         var q = r.qty;
-        if (q === undefined || q === null) return '<td style="'+td+'color:#ccc;">—</td>';
+        if (q === undefined || q === null || q === '') return '<td style="'+td+'color:#ccc;">—</td>';
         var qClr = q === 0 ? '#c0392b' : q < 5 ? '#92400E' : '#1a7a3f';
         return '<td style="'+td+'font-weight:600;color:'+qClr+';">'+q+'</td>';
       })() +
@@ -3741,7 +3743,7 @@ function enrichTableWithMasterfeed() {
     var feed = masterfeedData[(row.sku||'').toUpperCase()];
     if (!feed) return;
     // Enrich with masterfeed data
-    row.qty            = feed.qty;
+    row.qty            = parseInt(feed.qty) || 0;
     row.cat1           = feed.cat1;
     row.cat2           = feed.cat2;
     row.cat3           = feed.cat3;
