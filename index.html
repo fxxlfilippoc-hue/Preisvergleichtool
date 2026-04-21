@@ -967,7 +967,8 @@
       <table id="productTable" style="width:100%;border-collapse:collapse;font-size:13px;">
         <thead id="normalTableHead" style="background:#F4F3EF;">
           <tr>
-            <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;width:200px;">Produktname</th>
+            <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;width:180px;">Produktname</th>
+            <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;width:100px;">Marke</th>
             <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;width:65px;">Season</th>
             <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;">Mein Preis</th>
             <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;">Mein Rabatt</th>
@@ -1740,6 +1741,88 @@ function updateDashboard(rows) {
     pills.appendChild(btn);
   });
 
+  // ── Gruppierung nach Produktname ──────────────────────────────
+  // Nur für Fahrräder/Zubehör (nicht Cube) gruppieren
+  if (currentSource !== 'cube') {
+    var grouped = {};
+    tableRows.forEach(function(r) {
+      var key = (r.name || '').trim();
+      if (!grouped[key]) {
+        grouped[key] = {
+          sku:               r.sku,
+          skus:              [r.sku],
+          shop_prices:       (r.cheapest_provider ? (function(){ var m={}; m[r.cheapest_provider]=r.cheapest_price; return m; })() : {}),
+          name:              r.name,
+          brand:             r.brand,
+          warengruppe:       r.warengruppe,
+          my_price:          r.my_price,
+          cheapest_price:    r.cheapest_price,
+          cheapest_provider: r.cheapest_provider,
+          diff:              r.diff,
+          position:          r.position,
+          uvp:               r.uvp,
+          my_rabatt:         r.my_rabatt,
+          niedrigster:       r.niedrigster,
+          hoechster:         r.hoechster,
+          median_price:      r.median_price,
+          num_shops:         r.num_shops,
+          preisvorschlag:    r.preisvorschlag,
+          qty:               r.qty
+        };
+      } else {
+        var g = grouped[key];
+        // Mehrere SKUs sammeln
+        if (g.skus.indexOf(r.sku) < 0) g.skus.push(r.sku);
+        // Shop-Preise sammeln (günstigster Preis pro Shop)
+        if (r.cheapest_provider) {
+          var sp = g.shop_prices;
+          if (!(r.cheapest_provider in sp) || r.cheapest_price < sp[r.cheapest_provider]) {
+            sp[r.cheapest_provider] = r.cheapest_price;
+          }
+        }
+        // Niedrigster = kleinster niedrigster Preis aller SKUs
+        if (!isNaN(r.niedrigster) && (!isNaN(g.niedrigster) ? r.niedrigster < g.niedrigster : true))
+          g.niedrigster = r.niedrigster;
+        // Höchster = größter höchster Preis aller SKUs
+        if (!isNaN(r.hoechster) && (!isNaN(g.hoechster) ? r.hoechster > g.hoechster : true))
+          g.hoechster = r.hoechster;
+        // Günstigster Anbieter = der mit dem niedrigsten cheapest_price
+        if (!isNaN(r.cheapest_price) && (isNaN(g.cheapest_price) || r.cheapest_price < g.cheapest_price)) {
+          g.cheapest_price    = r.cheapest_price;
+          g.cheapest_provider = r.cheapest_provider;
+        }
+        // Mein Preis = Minimum (günstigste eigene Position)
+        if (!isNaN(r.my_price) && r.my_price < g.my_price) {
+          g.my_price   = r.my_price;
+          g.my_rabatt  = r.my_rabatt;
+        }
+        // Position = beste (niedrigste) Position
+        if (r.position < g.position) g.position = r.position;
+        // UVP = höchste UVP
+        if (!isNaN(r.uvp) && r.uvp > (g.uvp || 0)) g.uvp = r.uvp;
+        // Bestand summieren
+        if (r.qty !== undefined && r.qty !== null) g.qty = (g.qty || 0) + (r.qty || 0);
+        // num_shops = Maximum
+        if (r.num_shops > g.num_shops) g.num_shops = r.num_shops;
+      }
+    });
+    // diff und median_price aus aggregierten Werten berechnen
+    var groupedRows = Object.values(grouped);
+    groupedRows.forEach(function(g) {
+      g.diff = (!isNaN(g.cheapest_price) && !isNaN(g.my_price)) ? g.my_price - g.cheapest_price : 0;
+      // Ø Markt = Durchschnitt aus niedrigster und höchster
+      if (!isNaN(g.niedrigster) && !isNaN(g.hoechster)) {
+        g.median_price = (g.niedrigster + g.hoechster) / 2;
+      }
+      // my_rabatt neu berechnen
+      if (!isNaN(g.uvp) && g.uvp > 0 && !isNaN(g.my_price)) {
+        g.my_rabatt = (g.uvp - g.my_price) / g.uvp * 100;
+      }
+    });
+    tableRows = groupedRows;
+  }
+  // ────────────────────────────────────────────────────────────
+
   DATA.table = tableRows;
   currentPage = 1;
   currentFilter = 'all';
@@ -1874,7 +1957,7 @@ function renderTable() {
   document.getElementById('page-info').textContent = 'Zeige ' + (start+1) + '\u2013' + Math.min(start+pageSize, total) + ' von ' + total.toLocaleString('de-DE');
 
   var tbody = document.getElementById('tableBody');
-  tbody.innerHTML = rows.map(function(r) {
+  tbody.innerHTML = rows.map(function(r, ri) {
     var td   = 'padding:7px 12px;vertical-align:middle;border-bottom:0.5px solid #e8e6e0;font-size:13px;color:#1A1A18;';
     var mono = td + 'font-family:monospace;';
     var seasonMatch = (r.name||'').match(/\b(20\d{2})\b/);
@@ -1903,16 +1986,19 @@ function renderTable() {
     // Shops
     var shopsStr  = r.num_shops > 0 ? r.num_shops + ' Shops' : (r.cheapest_provider ? '1 Shop' : '—');
     return '<tr style="background:#fff;">' +
-      '<td style="'+td+'max-width:200px;">' +
+      '<td style="'+td+'max-width:180px;">' +
         '<div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+r.name+'">'+r.name+'</div>' +
-        '<div style="font-size:11px;color:#888;">'+(r.brand||'')+'</div>' +
+        '<div style="font-size:10px;color:#999;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+(r.skus||[r.sku]).join(', ')+'">'+((r.skus||[r.sku]).join(' · ')||r.sku)+'</div>' +
+      '</td>' +
+      '<td style="'+td+'max-width:100px;">' +
+        '<div style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(r.brand||'—')+'</div>' +
       '</td>' +
       '<td style="'+td+'text-align:center;">' +
         (season ? '<span style="background:#EBF3FC;color:#185FA5;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;">'+season+'</span>' : '<span style="color:#ccc;">—</span>') +
       '</td>' +
       '<td style="'+mono+'font-weight:600;">'+(isNaN(r.my_price)?'—':r.my_price.toFixed(2)+' €')+'</td>' +
       '<td style="'+mono+'color:#888;">'+rabStr+'</td>' +
-      '<td style="'+mono+'color:#888;">—</td>' +
+      '<td style="'+mono+'color:#888;">'+(r.median_price && !isNaN(r.median_price) ? r.median_price.toFixed(2)+' €' : '—')+'</td>' +
       '<td style="'+td+'">' +
         '<div style="font-weight:700;color:#c0392b;font-family:monospace;">'+niedrigStr+'</div>' +
         '<div style="font-size:11px;color:#888;">'+(r.cheapest_provider||'')+'</div>' +
@@ -1931,12 +2017,30 @@ function renderTable() {
         var qClr = q === 0 ? '#c0392b' : q < 5 ? '#92400E' : '#1a7a3f';
         return '<td style="'+td+'font-weight:600;color:'+qClr+';">'+q+'</td>';
       })() +
-      '<td style="'+td+'">' +
-        '<div style="font-weight:600;color:#185FA5;font-size:12px;">'+(r.cheapest_provider||'—')+'</div>' +
-        '<div style="font-size:11px;color:#888;">'+shopsStr+'</div>' +
-      '</td>' +
+      (function(){
+        var sp = r.shop_prices || {};
+        var shopKeys = Object.keys(sp).sort(function(a,b){ return sp[a]-sp[b]; });
+        var shopCount = shopKeys.length || r.num_shops || 0;
+        var hasMore = shopKeys.length > 1;
+        var rowId = 'nshops_' + ri;
+        var listHtml = shopKeys.map(function(sh){
+          var isCh = sh === r.cheapest_provider;
+          var pStr = !isNaN(sp[sh]) ? sp[sh].toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+'\u00a0\u20ac' : '—';
+          return '<div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;padding:2px 0;">'
+            + '<span style="color:'+(isCh?'#c0392b':'#555')+';">'+sh+'</span>'
+            + '<span style="font-family:monospace;font-weight:'+(isCh?'700':'400')+';">'+pStr+'</span>'
+            + '</div>';
+        }).join('');
+        return '<td style="'+td+'">'
+          + '<div style="font-weight:600;color:#185FA5;font-size:12px;">'+(r.cheapest_provider||'—')
+          + (hasMore ? ' <span id="nbtn_'+rowId+'" onclick="normalShopToggle(\''+rowId+'\')" style="cursor:pointer;font-size:10px;color:#185FA5;font-weight:600;">\u25bc alle</span>' : '')
+          + '</div>'
+          + '<div style="font-size:11px;color:#888;">'+shopCount+' Shop'+(shopCount!==1?'s':'')+'</div>'
+          + (hasMore ? '<div id="'+rowId+'" style="display:none;margin-top:5px;border-top:1px solid #eee;padding-top:4px;">'+listHtml+'</div>' : '')
+          + '</td>';
+      })() +
       '</tr>';
-  }).join('');
+  }, this).join('');
 
   var totalPages = Math.ceil(total / pageSize);
   var btns = document.getElementById('pageBtns');
@@ -3839,7 +3943,14 @@ function cubeToggleShops(btn) {
   btn.textContent = isOpen ? '▼ alle' : '▲ weniger';
 }
 
-
+function normalShopToggle(rowId) {
+  var el  = document.getElementById(rowId);
+  var btn = document.getElementById('nbtn_' + rowId);
+  if (!el || !btn) return;
+  var isOpen = el.style.display !== 'none';
+  el.style.display = isOpen ? 'none' : 'block';
+  btn.textContent = isOpen ? '▼ alle' : '▲ weniger';
+}
 
 
 </script>
