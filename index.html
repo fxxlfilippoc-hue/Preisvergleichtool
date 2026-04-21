@@ -1709,6 +1709,17 @@ function updateDashboard(rows) {
   DATA.table = tableRows;
   currentPage = 1;
   currentFilter = 'all';
+  // Filter zurücksetzen bei Quellenwechsel
+  searchTerm = ''; normalShop = ''; normalPos = ''; normalDiff = ''; normalStatusFilter = '';
+  var si = document.getElementById('searchInput');
+  var sf = document.getElementById('normalShopFilter');
+  var pf = document.getElementById('normalPosFilter');
+  var df = document.getElementById('normalDiffFilter');
+  if (si) si.value = '';
+  if (pf) pf.value = '';
+  if (df) df.value = '';
+  // Shop-Filter mit den tatsächlichen Shops befüllen
+  normalPopulateShopFilter(tableRows);
   renderTable();
 }
 
