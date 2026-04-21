@@ -910,15 +910,33 @@
             <option value="">Alle</option>
           </select>
         </div>
-        <div class="fg">
+        <div class="fg" id="catFilter3Wrap">
           <label>Cat3</label>
           <select id="catFilter3" onchange="applyCatFilter(3, this.value)" style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;min-width:120px;">
             <option value="">Alle</option>
           </select>
         </div>
-        <div class="fg">
+        <div class="fg" id="catFilter4Wrap">
           <label>Cat4</label>
           <select id="catFilter4" onchange="applyCatFilter(4, this.value)" style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;min-width:120px;">
+            <option value="">Alle</option>
+          </select>
+        </div>
+        <div class="fg" id="normalMarkeWrap">
+          <label>Marke</label>
+          <select id="normalMarkeFilter" onchange="normalApplyFilters()" style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;min-width:120px;">
+            <option value="">Alle</option>
+          </select>
+        </div>
+        <div class="fg" id="normalSaisonWrap">
+          <label>Season</label>
+          <select id="normalSaisonFilter" onchange="normalApplyFilters()" style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;min-width:120px;">
+            <option value="">Alle</option>
+          </select>
+        </div>
+        <div class="fg" id="normalFarbeWrap">
+          <label>Farbe</label>
+          <select id="normalFarbeFilter" onchange="normalApplyFilters()" style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;min-width:120px;">
             <option value="">Alle</option>
           </select>
         </div>
@@ -1449,6 +1467,17 @@ function onSourceChange(source) {
   currentSource = source;
   // Immediately hide/show panels before fetch
   toggleCubePanel(source === 'cube');
+  // Cat3/Cat4 nur für Fahrräder und Cube, bei Zubehör ausblenden
+  var showCat34 = source !== 'zubehoer';
+  var c3 = document.getElementById('catFilter3Wrap');
+  var c4 = document.getElementById('catFilter4Wrap');
+  if (c3) c3.style.display = showCat34 ? '' : 'none';
+  if (c4) c4.style.display = showCat34 ? '' : 'none';
+  if (!showCat34) {
+    activeCatFilters.cat3 = ''; activeCatFilters.cat4 = '';
+    var s3 = document.getElementById('catFilter3'); if (s3) s3.value = '';
+    var s4 = document.getElementById('catFilter4'); if (s4) s4.value = '';
+  }
   var sel = document.getElementById('sourceSelect');
   var spinner = document.getElementById('sourceLoading');
   var chevron = document.querySelector('.source-chevron');
@@ -1712,6 +1741,15 @@ function updateDashboard(rows) {
   // Filter zurücksetzen bei Quellenwechsel
   searchTerm = ''; normalShop = ''; normalPos = ''; normalDiff = ''; normalStatusFilter = '';
   activeCatFilters = { cat1:'', cat2:'', cat3:'', cat4:'' };
+  normalMarke = ''; normalSaison = ''; normalFarbe = '';
+  var mfw = document.getElementById('normalMarkeWrap');
+  var saw = document.getElementById('normalSaisonWrap');
+  var faw = document.getElementById('normalFarbeWrap');
+  // Marke/Saison/Farbe nur für fahrraeder und zubehoer (nicht cube)
+  var showMSF = source !== 'cube';
+  if (mfw) mfw.style.display = showMSF ? '' : 'none';
+  if (saw) saw.style.display = showMSF ? '' : 'none';
+  if (faw) faw.style.display = showMSF ? '' : 'none';
   var si = document.getElementById('searchInput');
   var sf = document.getElementById('normalShopFilter');
   var pf = document.getElementById('normalPosFilter');
@@ -1728,12 +1766,18 @@ function updateDashboard(rows) {
 var normalShop = '';
 var normalPos  = '';
 var normalDiff = '';
+var normalMarke = '';
+var normalSaison = '';
+var normalFarbe = '';
 
 function normalApplyFilters() {
-  searchTerm = (document.getElementById('searchInput').value || '').toLowerCase();
-  normalShop = (document.getElementById('normalShopFilter') ? document.getElementById('normalShopFilter').value : '');
-  normalPos  = (document.getElementById('normalPosFilter')  ? document.getElementById('normalPosFilter').value  : '');
-  normalDiff = (document.getElementById('normalDiffFilter') ? document.getElementById('normalDiffFilter').value : '');
+  searchTerm   = (document.getElementById('searchInput').value || '').toLowerCase();
+  normalShop   = (document.getElementById('normalShopFilter')   ? document.getElementById('normalShopFilter').value   : '');
+  normalPos    = (document.getElementById('normalPosFilter')    ? document.getElementById('normalPosFilter').value    : '');
+  normalDiff   = (document.getElementById('normalDiffFilter')   ? document.getElementById('normalDiffFilter').value   : '');
+  normalMarke  = (document.getElementById('normalMarkeFilter')  ? document.getElementById('normalMarkeFilter').value  : '');
+  normalSaison = (document.getElementById('normalSaisonFilter') ? document.getElementById('normalSaisonFilter').value : '');
+  normalFarbe  = (document.getElementById('normalFarbeFilter')  ? document.getElementById('normalFarbeFilter').value  : '');
   currentPage = 1;
   renderTable();
 }
@@ -1747,7 +1791,17 @@ function normalClearFilters() {
   if (sf) sf.value = '';
   if (pf) pf.value = '';
   if (df) df.value = '';
+  var mf = document.getElementById('normalMarkeFilter');
+  var saf = document.getElementById('normalSaisonFilter');
+  var ff = document.getElementById('normalFarbeFilter');
+  if (mf) mf.value = ''; if (saf) saf.value = ''; if (ff) ff.value = '';
   searchTerm = ''; normalShop = ''; normalPos = ''; normalDiff = '';
+  normalMarke = ''; normalSaison = ''; normalFarbe = '';
+  activeCatFilters = { cat1:'', cat2:'', cat3:'', cat4:'' };
+  var s1=document.getElementById('catFilter1'); if(s1) s1.value='';
+  var s2=document.getElementById('catFilter2'); if(s2) s2.value='';
+  var s3=document.getElementById('catFilter3'); if(s3) s3.value='';
+  var s4=document.getElementById('catFilter4'); if(s4) s4.value='';
   currentPage = 1;
   renderTable();
 }
@@ -1796,6 +1850,10 @@ function getFilteredData() {
     if (activeCatFilters.cat2 && r.cat2 !== activeCatFilters.cat2) return false;
     if (activeCatFilters.cat3 && r.cat3 !== activeCatFilters.cat3) return false;
     if (activeCatFilters.cat4 && r.cat4 !== activeCatFilters.cat4) return false;
+    // Marke / Season / Farbe
+    if (normalMarke  && r.brand      !== normalMarke)  return false;
+    if (normalSaison && r.saison     !== normalSaison) return false;
+    if (normalFarbe  && r.farbe      !== normalFarbe)  return false;
     return true;
   });
 }
@@ -3558,7 +3616,7 @@ function loadMasterfeed() {
           cat3:           validCat(r['cat3'] || r['Cat3']),
           cat4:           validCat(r['cat4'] || r['Cat4']),
           hauptwg:        r['Hauptwarengruppe'] || '',
-          saison:         r['Saison'] || '',
+          saison:         (function(v){ v=(v||'').trim(); return /^(20\d{2}|19\d{2}|Aktion|-)$/.test(v) ? v : ''; })(r['Saison']),
           geschlecht:     r['Geschlecht'] || '',
           radgroesse:     r['Radgroesse'] || '',
           rahmenmaterial: r['Rahmenmaterial'] || '',
@@ -3692,6 +3750,7 @@ function enrichTableWithMasterfeed() {
     row.gaenge         = feed.gaenge;
     row.schaltart      = feed.schaltart;
     row.farbe          = feed.farbe;
+    row.saison         = feed.saison;
     row.hauptwg        = feed.hauptwg;
     // Use feed UVP if ShopTracker UVP is missing
     if ((!row.uvp || isNaN(row.uvp) || row.uvp <= 0) && feed.uvp > 0) {
@@ -3702,21 +3761,38 @@ function enrichTableWithMasterfeed() {
   });
 }
 
-// Populate Cat filter dropdowns — nur Werte die in DATA.table vorhanden sind
+// Populate Cat + Marke/Saison/Farbe filter dropdowns — nur Werte aus DATA.table
 function populateCatFilters() {
-  // Sammle distincte Werte aus der aktuell geladenen Tabelle
-  var vals = { cat1: {}, cat2: {}, cat3: {}, cat4: {} };
+  var vals = { cat1: {}, cat2: {}, cat3: {}, cat4: {}, brand: {}, saison: {}, farbe: {} };
   (DATA.table || []).forEach(function(r) {
-    if (r.cat1) vals.cat1[r.cat1] = 1;
-    if (r.cat2) vals.cat2[r.cat2] = 1;
-    if (r.cat3) vals.cat3[r.cat3] = 1;
-    if (r.cat4) vals.cat4[r.cat4] = 1;
+    if (r.cat1)  vals.cat1[r.cat1]   = 1;
+    if (r.cat2)  vals.cat2[r.cat2]   = 1;
+    if (r.cat3)  vals.cat3[r.cat3]   = 1;
+    if (r.cat4)  vals.cat4[r.cat4]   = 1;
+    if (r.brand)  vals.brand[r.brand] = 1;
+    if (r.saison) vals.saison[r.saison] = 1;
+    if (r.farbe)  vals.farbe[r.farbe]  = 1;
   });
+  // Cat-Dropdowns
   ['1','2','3','4'].forEach(function(n) {
     var sel = document.getElementById('catFilter' + n);
     if (!sel) return;
     var cur = sel.value;
     var list = Object.keys(vals['cat'+n]).sort();
+    sel.innerHTML = '<option value="">Alle</option>';
+    list.forEach(function(c) {
+      var o = document.createElement('option');
+      o.value = c; o.textContent = c;
+      if (c === cur) o.selected = true;
+      sel.appendChild(o);
+    });
+  });
+  // Marke / Saison / Farbe
+  [['normalMarkeFilter', 'brand'], ['normalSaisonFilter', 'saison'], ['normalFarbeFilter', 'farbe']].forEach(function(pair) {
+    var sel = document.getElementById(pair[0]);
+    if (!sel) return;
+    var cur = sel.value;
+    var list = Object.keys(vals[pair[1]]).sort();
     sel.innerHTML = '<option value="">Alle</option>';
     list.forEach(function(c) {
       var o = document.createElement('option');
