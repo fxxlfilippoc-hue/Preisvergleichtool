@@ -457,7 +457,7 @@
     margin-bottom: 1rem;
     align-items: flex-end;
   }
-  .cube-filters .fg { display: flex; flex-direction: column; gap: 3px; min-width: 100px; flex: 1 1 100px; }
+  .cube-filters .fg { display: flex; flex-direction: column; gap: 3px; flex: 1 1 0; min-width: 80px; }
   .cube-filters label { font-size: 9px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); white-space: nowrap; }
   .cube-filters input, .cube-filters select {
     font-family: 'DM Sans', sans-serif; font-size: 11px;
@@ -871,8 +871,8 @@
     <div id="normal-preis-panel">
 
       <!-- Filter Bar -->
-      <div class="cube-filters" style="margin-bottom:1rem;">
-        <div class="fg"><label>Suche</label><input class="search-input" type="text" id="searchInput" placeholder="Artikel, SKU…" oninput="normalApplyFilters()" style="width:160px;"></div>
+      <div class="cube-filters" style="margin-bottom:1rem;align-items:flex-end;">
+        <div class="fg" style="flex:0 0 140px;"><label>Suche</label><input class="search-input" type="text" id="searchInput" placeholder="Artikel, SKU…" oninput="normalApplyFilters()" style="width:100%;"></div>
         <div class="fg">
           <label>Günstigster Anbieter</label>
           <select id="normalShopFilter" onchange="normalApplyFilters()" style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;width:100%;">
