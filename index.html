@@ -1632,14 +1632,25 @@ function updateDashboard(rows) {
       var minPreis   = parseNum(r['Mindestpreis']);
       var maxPreis   = parseNum(r['Standardpreis']);
       var myRabatt   = (!isNaN(uvp) && uvp > 0 && !isNaN(myPrice)) ? (uvp - myPrice) / uvp * 100 : NaN;
-      // Niedrigster = Mindestpreis oder günstigster Konkurrenzpreis (bei Platz 1 = eigener Preis)
-      var niedrigster = !isNaN(minPreis) ? minPreis : (!isNaN(cheapPrice) ? cheapPrice : myPrice);
+      // Niedrigster = günstigster Konkurrenzpreis wenn vorhanden, sonst eigener Preis
+      var niedrigster = (!isNaN(cheapPrice) && provider) ? cheapPrice : myPrice;
       // Höchster = Standardpreis oder UVP
       var hoechster   = !isNaN(maxPreis) ? maxPreis : (!isNaN(uvp) ? uvp : NaN);
+      var rawName  = r['Artikelbezeichnung'] || prod['name'] || '';
+      var brand    = (r['Marke'] || prod['brand'] || '').trim();
+      // Marke am Anfang des Namens entfernen (case-insensitive)
+      var cleanName = rawName;
+      if (brand && cleanName.toLowerCase().startsWith(brand.toLowerCase())) {
+        cleanName = cleanName.slice(brand.length).trim();
+      }
+      // Season aus Artikelbezeichnung extrahieren
+      var seasonMatch = rawName.match(/\b(20\d{2})\b/);
+      var rowSeason = seasonMatch ? seasonMatch[1] : (/aktion/i.test(rawName) ? 'Aktion' : '');
       tableRows.push({
         sku:               sku,
-        name:              r['Artikelbezeichnung'] || prod['name'] || '',
-        brand:             r['Marke'] || prod['brand'] || '',
+        name:              cleanName,
+        brand:             brand,
+        season:            rowSeason,
         warengruppe:       (r['Benutzerdefiniert'] || '').trim(),
         my_price:          myPrice,
         cheapest_price:    cheapPrice,
@@ -1746,7 +1757,7 @@ function updateDashboard(rows) {
   if (currentSource !== 'cube') {
     var grouped = {};
     tableRows.forEach(function(r) {
-      var key = (r.name || '').trim();
+      var key = (r.name || '').trim() + '|' + (r.season || '');
       if (!grouped[key]) {
         grouped[key] = {
           sku:               r.sku,
@@ -1754,7 +1765,7 @@ function updateDashboard(rows) {
           shop_prices:       (r.cheapest_provider ? (function(){ var m={}; m[r.cheapest_provider]=r.cheapest_price; return m; })() : {}),
           name:              r.name,
           brand:             r.brand,
-          warengruppe:       r.warengruppe,
+          season:            r.season || '',
           my_price:          r.my_price,
           cheapest_price:    r.cheapest_price,
           cheapest_provider: r.cheapest_provider,
@@ -1961,7 +1972,7 @@ function renderTable() {
     var td   = 'padding:7px 12px;vertical-align:middle;border-bottom:0.5px solid #e8e6e0;font-size:13px;color:#1A1A18;';
     var mono = td + 'font-family:monospace;';
     var seasonMatch = (r.name||'').match(/\b(20\d{2})\b/);
-    var season = seasonMatch ? seasonMatch[1] : (/aktion/i.test(r.name||'') ? 'Aktion' : '');
+    var season = r.season || (seasonMatch ? seasonMatch[1] : (/aktion/i.test(r.name||'') ? 'Aktion' : ''));
     var niedrig   = !isNaN(r.niedrigster) && r.niedrigster > 0 ? r.niedrigster : r.cheapest_price;
     var idx       = (!isNaN(r.my_price) && !isNaN(niedrig) && niedrig > 0) ? r.my_price / niedrig * 100 : null;
     var idxColor  = idx===null ? '#888' : idx>105 ? '#c0392b' : idx<97 ? '#1a7a3f' : '#1A1A18';
@@ -3866,11 +3877,27 @@ function parseCSVPipe(text) {
 // Enrich DATA.table rows with masterfeed info
 function enrichTableWithMasterfeed() {
   if (!DATA.table) return;
+
+  // DATA.table enthält bereits gruppierte Zeilen (jede hat r.skus[]).
+  // Wir iterieren über alle SKUs jeder Gruppe und holen Masterfeed-Daten.
   DATA.table.forEach(function(row) {
-    var feed = masterfeedData[(row.sku||'').toUpperCase()];
+    var skus = row.skus && row.skus.length ? row.skus : [row.sku];
+    // Ersten Masterfeed-Treffer für diese Gruppe verwenden
+    var feed = null;
+    for (var i = 0; i < skus.length; i++) {
+      feed = masterfeedData[(skus[i]||'').toUpperCase()];
+      if (feed) break;
+    }
     if (!feed) return;
-    // Enrich with masterfeed data
-    row.qty            = parseInt(feed.qty) || 0;
+    // Name aus Masterfeed (sauber, ohne Marke/Farbe/Saison)
+    if (feed.name && feed.name.trim()) row.name = feed.name.trim();
+    // Bestand: Summe aller SKUs
+    var totalQty = 0;
+    skus.forEach(function(s) {
+      var mf = masterfeedData[(s||'').toUpperCase()];
+      if (mf) totalQty += (parseInt(mf.qty) || 0);
+    });
+    row.qty            = totalQty;
     row.cat1           = feed.cat1;
     row.cat2           = feed.cat2;
     row.cat3           = feed.cat3;
@@ -3891,6 +3918,61 @@ function enrichTableWithMasterfeed() {
     // Use feed brand if missing
     if (!row.brand && feed.brand) row.brand = feed.brand;
   });
+
+  // Namen haben sich geändert → Gruppen neu zusammenführen
+  // (Zeilen mit jetzt gleichem Namen zusammenfassen)
+  if (currentSource !== 'cube') {
+    var merged = {};
+    DATA.table.forEach(function(row) {
+      var key = (row.name || '').trim() + '|' + (row.season || '');
+      if (!merged[key]) {
+        merged[key] = row;
+      } else {
+        var g = merged[key];
+        // SKUs zusammenführen
+        (row.skus || [row.sku]).forEach(function(s) {
+          if (g.skus.indexOf(s) < 0) g.skus.push(s);
+        });
+        // shop_prices zusammenführen
+        if (row.shop_prices) {
+          Object.keys(row.shop_prices).forEach(function(sh) {
+            if (!(sh in g.shop_prices) || row.shop_prices[sh] < g.shop_prices[sh]) {
+              g.shop_prices[sh] = row.shop_prices[sh];
+            }
+          });
+        }
+        // Niedrigster/Höchster aktualisieren
+        if (!isNaN(row.niedrigster) && row.niedrigster < g.niedrigster) g.niedrigster = row.niedrigster;
+        if (!isNaN(row.hoechster)   && row.hoechster   > g.hoechster)   g.hoechster   = row.hoechster;
+        // Günstigster Anbieter
+        if (!isNaN(row.cheapest_price) && row.cheapest_price < g.cheapest_price) {
+          g.cheapest_price    = row.cheapest_price;
+          g.cheapest_provider = row.cheapest_provider;
+        }
+        // Mein Preis = Minimum
+        if (!isNaN(row.my_price) && row.my_price < g.my_price) g.my_price = row.my_price;
+        // Position = beste
+        if (row.position < g.position) g.position = row.position;
+        // Bestand summieren (bereits pro Gruppe berechnet, hier nur addieren wenn unterschiedliche Gruppen)
+        g.qty = (g.qty || 0) + (row.qty || 0);
+        // num_shops = Maximum
+        if (row.num_shops > g.num_shops) g.num_shops = row.num_shops;
+        // UVP = höchste
+        if (!isNaN(row.uvp) && row.uvp > (g.uvp || 0)) g.uvp = row.uvp;
+      }
+    });
+    var remerged = Object.values(merged);
+    remerged.forEach(function(g) {
+      g.diff = (!isNaN(g.cheapest_price) && !isNaN(g.my_price)) ? g.my_price - g.cheapest_price : 0;
+      if (!isNaN(g.niedrigster) && !isNaN(g.hoechster)) {
+        g.median_price = (g.niedrigster + g.hoechster) / 2;
+      }
+      if (!isNaN(g.uvp) && g.uvp > 0 && !isNaN(g.my_price)) {
+        g.my_rabatt = (g.uvp - g.my_price) / g.uvp * 100;
+      }
+    });
+    DATA.table = remerged;
+  }
 }
 
 // Populate Cat + Marke/Saison/Farbe filter dropdowns — nur Werte aus DATA.table
