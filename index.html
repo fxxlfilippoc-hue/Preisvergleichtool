@@ -965,27 +965,7 @@
     </div>
     <div style="overflow-x:auto;">
       <table id="productTable" style="width:100%;border-collapse:collapse;font-size:13px;">
-        <thead id="normalTableHead" style="background:#F4F3EF;">
-          <tr>
-            <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;width:180px;">Produktname</th>
-            <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;width:100px;">Marke</th>
-            <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;width:65px;">Season</th>
-            <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;">Mein Preis</th>
-            <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;">Mein Rabatt</th>
-            <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;">Ø Markt</th>
-            <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;width:110px;">Niedrigster</th>
-            <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;">Höchster</th>
-            <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;width:70px;">Index</th>
-            <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;">Zielpreis</th>
-            <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;">Rabatt (Ziel)</th>
-            <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;">Potenzial</th>
-            <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;">Empfehlung</th>
-            <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;">Status</th>
-            <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;">UVP</th>
-            <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;">Bestand</th>
-            <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:1.5px solid #e0ddd6;width:110px;">Shops</th>
-          </tr>
-        </thead>
+        <thead id="normalTableHead" style="background:#F4F3EF;"></thead>
         <tbody id="tableBody"></tbody>
       </table>
     </div>
@@ -1957,8 +1937,75 @@ function getFilteredData() {
   });
 }
 
+function normalSortBy(col) {
+  if (normalSortCol === col) normalSortDir *= -1;
+  else { normalSortCol = col; normalSortDir = 1; }
+  renderTable();
+}
+
+var normalCols = [
+  {k:'name',             l:'Produktname',    w:'180px'},
+  {k:'brand',            l:'Marke',          w:'100px'},
+  {k:'season',           l:'Season',         w:'65px'},
+  {k:'my_price',         l:'Mein Preis',     w:''},
+  {k:'my_rabatt',        l:'Mein Rabatt',    w:''},
+  {k:'median_price',     l:'Ø Markt',        w:''},
+  {k:'niedrigster',      l:'Niedrigster',    w:'110px'},
+  {k:'hoechster',        l:'Höchster',       w:''},
+  {k:'idx',              l:'Index',          w:'70px'},
+  {k:'zielpreis',        l:'Zielpreis',      w:''},
+  {k:'rabZiel',          l:'Rabatt (Ziel)',  w:''},
+  {k:'pot',              l:'Potenzial',      w:''},
+  {k:'empfehlung',       l:'Empfehlung',     w:''},
+  {k:'status',           l:'Status',         w:''},
+  {k:'uvp',              l:'UVP',            w:''},
+  {k:'qty',              l:'Bestand',        w:''},
+  {k:'num_shops',        l:'Shops',          w:'110px'},
+];
+
+function buildNormalHeader() {
+  var thead = document.getElementById('normalTableHead');
+  if (!thead) return;
+  thead.innerHTML = '';
+  var tr = document.createElement('tr');
+  normalCols.forEach(function(c) {
+    var arrow = normalSortCol === c.k ? (normalSortDir === 1 ? ' ↓' : ' ↑') : '';
+    var th = document.createElement('th');
+    th.style.cssText = 'text-align:left;padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;white-space:nowrap;cursor:pointer;border-bottom:1.5px solid #e0ddd6;background:#F4F3EF;'+(c.w?'width:'+c.w+';':'');
+    th.textContent = c.l + arrow;
+    (function(k){ th.onclick = function(){ normalSortBy(k); }; })(c.k);
+    tr.appendChild(th);
+  });
+  thead.appendChild(tr);
+}
+
 function renderTable() {
   var filtered = getFilteredData();
+
+  // Sortierung
+  var numCols = {my_price:1, my_rabatt:1, median_price:1, niedrigster:1, hoechster:1, idx:1, zielpreis:1, rabZiel:1, pot:1, uvp:1, qty:1, num_shops:1};
+  filtered.sort(function(a, b) {
+    var av, bv;
+    if (normalSortCol === 'idx') {
+      var an = (!isNaN(a.niedrigster) && a.niedrigster > 0) ? a.niedrigster : a.cheapest_price;
+      var bn = (!isNaN(b.niedrigster) && b.niedrigster > 0) ? b.niedrigster : b.cheapest_price;
+      av = (!isNaN(a.my_price) && !isNaN(an) && an > 0) ? a.my_price / an * 100 : null;
+      bv = (!isNaN(b.my_price) && !isNaN(bn) && bn > 0) ? b.my_price / bn * 100 : null;
+      if (av === null && bv === null) return 0;
+      if (av === null) return 1; if (bv === null) return -1;
+      return (av - bv) * normalSortDir;
+    }
+    av = a[normalSortCol]; bv = b[normalSortCol];
+    if (numCols[normalSortCol]) {
+      av = parseFloat(av) || 0; bv = parseFloat(bv) || 0;
+      return (av - bv) * normalSortDir;
+    }
+    av = (av||'').toString().toLowerCase(); bv = (bv||'').toString().toLowerCase();
+    return av > bv ? normalSortDir : av < bv ? -normalSortDir : 0;
+  });
+
+  buildNormalHeader();
+
   var total    = filtered.length;
   var start    = (currentPage - 1) * pageSize;
   var rows     = filtered.slice(start, start + pageSize);
@@ -2189,6 +2236,7 @@ window.addEventListener('load', function() {
 
 // ── KPI Karten für normale Quellen ──
 var normalStatusFilter = '';
+var normalSortCol = 'name', normalSortDir = 1;
 
 function renderNormalKPIs(rows) {
   var el = document.getElementById('normalKpiRow');
