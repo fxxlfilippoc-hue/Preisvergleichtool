@@ -1595,7 +1595,10 @@ function updateDashboard(rows) {
     var sku        = (r['SKU'] || '').trim();
     var myPrice    = parseNum(r['Mein Preis']);
     var cheapPrice = parseNum(r['Günstigster Preis']);
+    // Wenn günstigster Preis leer → wir sind günstigster
+    if (isNaN(cheapPrice) && !isNaN(myPrice)) { cheapPrice = myPrice; }
     var diff       = parseNum(r['Differenz zum günstigsten Preis']);
+    if (isNaN(diff) && !isNaN(myPrice)) { diff = 0; }
     var pos        = parseInt(r['Meine Position']) || 1;
     var provider   = (r['Günstigster Anbieter'] || '').trim();
     var prod       = produktDB[sku] || {};
@@ -1618,7 +1621,7 @@ function updateDashboard(rows) {
     else if (pos === 3) pos3++;
     else pos4plus++;
 
-    if (pos > 1 && !isNaN(cheapPrice)) {
+    if (!isNaN(myPrice)) {
       var _uvpRaw = parseNum(r['UVP']);
       var uvp = (!isNaN(_uvpRaw) && _uvpRaw > 0) ? _uvpRaw : parseNum(r['Standardpreis']);
       var median     = parseNum(r['Medianpreis']);
@@ -1626,8 +1629,8 @@ function updateDashboard(rows) {
       var minPreis   = parseNum(r['Mindestpreis']);
       var maxPreis   = parseNum(r['Standardpreis']);
       var myRabatt   = (!isNaN(uvp) && uvp > 0 && !isNaN(myPrice)) ? (uvp - myPrice) / uvp * 100 : NaN;
-      // Niedrigster = Mindestpreis oder günstigster Konkurrenzpreis
-      var niedrigster = !isNaN(minPreis) ? minPreis : cheapPrice;
+      // Niedrigster = Mindestpreis oder günstigster Konkurrenzpreis (bei Platz 1 = eigener Preis)
+      var niedrigster = !isNaN(minPreis) ? minPreis : (!isNaN(cheapPrice) ? cheapPrice : myPrice);
       // Höchster = Standardpreis oder UVP
       var hoechster   = !isNaN(maxPreis) ? maxPreis : (!isNaN(uvp) ? uvp : NaN);
       tableRows.push({
