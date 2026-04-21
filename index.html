@@ -3410,7 +3410,7 @@ function updateCubeStratBlock() {
 function downloadNormalExcel() {
   var filtered = getFilteredData();
   if (!filtered.length) { showToast('Keine Daten zum Exportieren.', true); return; }
-  var rows = [['Produktname','Marke','Season','Mein Preis','Mein Rabatt','Niedrigster','Günstigster Anbieter','Höchster','Index','Zielpreis','Rabatt (Ziel)','Potenzial','UVP','Shops','Position']];
+  var rows = [['SKU (Artikelnummer)','Produktname','Marke','Season','Mein Preis','Mein Rabatt %','Ø Markt','Niedrigster','Günstigster Anbieter','Höchster','Preisindex %','Zielpreis','Rabatt (Ziel) %','Potenzial','UVP','Bestand','Anzahl Shops','Position']];
   filtered.forEach(function(r) {
     var sm = (r.name||'').match(/\b(20\d{2})\b/);
     var season = sm ? sm[1] : (/aktion/i.test(r.name||'') ? 'Aktion' : '');
@@ -3420,7 +3420,30 @@ function downloadNormalExcel() {
     var hasZiel = r.zielpreis !== undefined && r.zielpreis !== null;
     var rabZiel = (hasZiel && !isNaN(r.uvp) && r.uvp > 0) ? +((r.uvp-r.zielpreis)/r.uvp*100).toFixed(1) : '';
     var pot = hasZiel ? +(r.zielpreis - r.my_price).toFixed(2) : '';
-    rows.push([r.name||'', r.brand||'', season, r.my_price||'', myRab, niedrig||'', r.cheapest_provider||'', r.hoechster||'', idx, r.zielpreis||'', rabZiel, pot, r.uvp||'', r.num_shops||'', r.position||'']);
+    var skus = r.skus && r.skus.length ? r.skus : [r.sku];
+    // Eine Zeile pro SKU in der Gruppe
+    skus.forEach(function(sku, i) {
+      rows.push([
+        sku,
+        r.name||'',
+        r.brand||'',
+        season,
+        i === 0 ? (r.my_price||'') : '',   // Preis/Rabatt nur bei erster SKU
+        i === 0 ? myRab : '',
+        i === 0 ? (r.median_price ? +r.median_price.toFixed(2) : '') : '',
+        i === 0 ? (niedrig||'') : '',
+        i === 0 ? (r.cheapest_provider||'') : '',
+        i === 0 ? (r.hoechster||'') : '',
+        i === 0 ? idx : '',
+        i === 0 ? (r.zielpreis||'') : '',
+        i === 0 ? rabZiel : '',
+        i === 0 ? pot : '',
+        i === 0 ? (r.uvp||'') : '',
+        i === 0 ? (r.qty !== undefined && r.qty !== null ? r.qty : '') : '',
+        i === 0 ? (r.num_shops||'') : '',
+        i === 0 ? (r.position||'') : ''
+      ]);
+    });
   });
   excelExport(rows, 'preisanpassungen_' + currentSource + '.xlsx');
 }
