@@ -1746,7 +1746,7 @@ function updateDashboard(rows) {
   var saw = document.getElementById('normalSaisonWrap');
   var faw = document.getElementById('normalFarbeWrap');
   // Marke/Saison/Farbe nur für fahrraeder und zubehoer (nicht cube)
-  var showMSF = source !== 'cube';
+  var showMSF = currentSource !== 'cube';
   if (mfw) mfw.style.display = showMSF ? '' : 'none';
   if (saw) saw.style.display = showMSF ? '' : 'none';
   if (faw) faw.style.display = showMSF ? '' : 'none';
