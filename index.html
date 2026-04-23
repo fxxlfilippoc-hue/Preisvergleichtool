@@ -1471,10 +1471,7 @@ var API_SOURCES = {
 };
 
 // Cache für Filter-Werte pro Quelle (wird beim CSV-Laden befüllt)
-var filterValuesCache = {
-  fahrraeder: { brands:{}, cat1s:{}, cat2s:{}, cat3s:{}, seasons:{} },
-  zubehoer:   { brands:{}, cat1s:{}, cat2s:{}, cat3s:{}, seasons:{} }
-};
+var filterValuesCache = { fahrraeder: null, zubehoer: null };
 
 
 var currentSource = 'cube';
@@ -3251,23 +3248,46 @@ function stratSrcLabel(src) {
 function stratPopulateFilterDropdowns() {
   var src = stratCurrentSrc;
 
-  function fillDropdowns(brands, cat1s, cat2s, cat3s, seasons) {
-    function fill(id, vals) {
-      var sel = document.getElementById(id);
-      if (!sel) return;
-      var cur = sel.value;
-      sel.innerHTML = '<option value="alle">Alle</option>';
-      Object.keys(vals).sort().forEach(function(v) {
-        if (v === 'alle') return;
-        var o = document.createElement('option');
-        o.value = v; o.textContent = v;
-        if (v === cur) o.selected = true;
-        sel.appendChild(o);
+  function fill(id, vals) {
+    var sel = document.getElementById(id);
+    if (!sel) return;
+    var cur = sel.value;
+    sel.innerHTML = '<option value="alle">Alle</option>';
+    vals.sort().forEach(function(v) {
+      if (!v || v === 'alle') return;
+      var o = document.createElement('option');
+      o.value = v; o.textContent = v;
+      if (v === cur) o.selected = true;
+      sel.appendChild(o);
+    });
+  }
+
+  function doFill() {
+    var cached = filterValuesCache[src];
+    var brands = cached ? Object.keys(cached.brands) : [];
+    var cat1s  = cached ? Object.keys(cached.cat1s)  : [];
+    var cat2s  = cached ? Object.keys(cached.cat2s)  : [];
+    var cat3s  = cached ? Object.keys(cached.cat3s)  : [];
+    var seasons = ['2026','2025','2024','2023','2022','Aktion'];
+    if (cached) Object.keys(cached.seasons).forEach(function(s){ if (seasons.indexOf(s)<0) seasons.push(s); });
+
+    // Aus Masterfeed befüllen wenn Cache leer
+    if (!brands.length && masterfeedLoaded) {
+      var b={}, c1={}, c2={}, c3={};
+      Object.values(masterfeedData).forEach(function(mf) {
+        if (mf.brand) b[mf.brand] = 1;
+        if (mf.cat1 && mf.cat1.length < 60) c1[mf.cat1] = 1;
+        if (mf.cat2 && mf.cat2.length < 60) c2[mf.cat2] = 1;
+        if (mf.cat3 && mf.cat3.length < 60) c3[mf.cat3] = 1;
       });
+      brands = Object.keys(b);
+      cat1s  = Object.keys(c1);
+      cat2s  = Object.keys(c2);
+      cat3s  = Object.keys(c3);
+      filterValuesCache[src] = { brands:b, cat1s:c1, cat2s:c2, cat3s:c3, seasons:{} };
     }
-    var fixedSeasons = {'2026':'2026','2025':'2025','2024':'2024','2023':'2023','Aktion':'Aktion'};
-    Object.keys(seasons).forEach(function(s){ fixedSeasons[s]=s; });
-    fill('newSeason', fixedSeasons);
+
+    fill('newSeason', seasons);
     fill('newMarke',  brands);
     fill('newCat1',   cat1s);
     fill('newCat2',   cat2s);
@@ -3275,62 +3295,13 @@ function stratPopulateFilterDropdowns() {
     stratUpdateFilterState();
   }
 
-  // Cube hat keine Cat-Filter → nur Season anbieten
-  if (src === 'cube') {
-    fillDropdowns({}, {}, {}, {}, {});
-    return;
+  if (src === 'cube') { doFill(); return; }
+
+  if (masterfeedLoaded) {
+    doFill();
+  } else {
+    loadMasterfeed().then(doFill);
   }
-
-  // Cache vorhanden und nicht leer → direkt nutzen
-  var cached = filterValuesCache[src];
-  if (cached && Object.keys(cached.brands).length > 0) {
-    fillDropdowns(cached.brands, cached.cat1s, cached.cat2s, cached.cat3s, cached.seasons);
-    return;
-  }
-
-  // Cache leer → Masterfeed laden (er enthält Marke + Cat1-3), dann CSV für Season/Marke
-  var url = API_SOURCES[src];
-  if (!url) return;
-
-  // Masterfeed zuerst sicherstellen
-  var mfPromise = masterfeedLoaded ? Promise.resolve() : loadMasterfeed();
-  mfPromise.then(function() {
-    fetch(url)
-      .then(function(r){ return r.text(); })
-      .then(function(text) {
-        var lines = text.replace(/^\uFEFF/,'').trim().split(/\r?\n/);
-        var sep = ';';
-        var headers = lines[0].split(sep).map(function(h){ return h.trim().replace(/^"|"$/g,''); });
-        var idxBrand = headers.indexOf('Marke');
-        var idxBezeichnung = headers.indexOf('Artikelbezeichnung');
-        var brands = {}, seasons = {}, skus = [];
-        for (var i = 1; i < lines.length; i++) {
-          var cols = lines[i].split(sep);
-          if (idxBrand >= 0 && cols[idxBrand] && cols[idxBrand].trim()) brands[cols[idxBrand].trim()] = 1;
-          if (idxBezeichnung >= 0) {
-            var bez = cols[idxBezeichnung] || '';
-            var sm = bez.match(/\b(20\d{2})\b/);
-            if (sm) seasons[sm[1]] = 1;
-            else if (/aktion/i.test(bez)) seasons['Aktion'] = 1;
-          }
-          // SKU für Masterfeed-Lookup
-          var idxSku = headers.indexOf('SKU');
-          if (idxSku >= 0 && cols[idxSku]) skus.push(cols[idxSku].trim().toUpperCase());
-        }
-        // Cat1/2/3 aus Masterfeed für diese SKUs
-        var cat1s = {}, cat2s = {}, cat3s = {};
-        skus.forEach(function(sku) {
-          var mf = masterfeedData[sku];
-          if (!mf) return;
-          if (mf.cat1) cat1s[mf.cat1] = 1;
-          if (mf.cat2) cat2s[mf.cat2] = 1;
-          if (mf.cat3) cat3s[mf.cat3] = 1;
-        });
-        filterValuesCache[src] = { brands:brands, cat1s:cat1s, cat2s:cat2s, cat3s:cat3s, seasons:seasons };
-        fillDropdowns(brands, cat1s, cat2s, cat3s, seasons);
-      })
-      .catch(function(e){ console.warn('Filter-Dropdown Fetch Fehler:', e); });
-  });
 }
 
 // Zählt wie viele Filter gesetzt (nicht 'alle') sind
