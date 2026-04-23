@@ -1172,7 +1172,7 @@
         </button>
       </div>
       <div style="margin-top:8px;font-size:11px;color:var(--muted);">
-        <b style="color:var(--text);">P1</b> = gilt für alle Artikel (Catchall) ·
+        <b style="color:var(--text);">P1</b> = genau 1 Filter (breiteste Regel) ·
         <b style="color:var(--text);">P2</b> = gilt für eine Season oder Marke ·
         <b style="color:var(--text);">P3</b> = gilt für Season + Marke + Warengruppe · Höchste passende Priorität gewinnt
       </div>
@@ -1182,15 +1182,15 @@
         </div>
         <div style="display:grid;grid-template-columns:80px 1fr;padding:6px 10px;border-top:0.5px solid var(--border);background:#fff;">
           <span style="font-weight:700;color:var(--text);">P3 <span style="font-weight:400;color:var(--muted);">Spezifisch</span></span>
-          <span style="color:var(--text);">Season + Marke + Warengruppe alle gesetzt → gilt nur für diese exakte Kombination</span>
+          <span style="color:var(--text);">Genau 3 Filter gesetzt → gilt nur für diese exakte Kombination</span>
         </div>
         <div style="display:grid;grid-template-columns:80px 1fr;padding:6px 10px;border-top:0.5px solid var(--border);background:#fafaf8;">
           <span style="font-weight:700;color:var(--text);">P2 <span style="font-weight:400;color:var(--muted);">Semi</span></span>
-          <span style="color:var(--text);">Eine oder zwei Bedingungen gesetzt (z.B. nur Marke) → gilt für alle Artikel dieser Marke</span>
+          <span style="color:var(--text);">Genau 2 Filter gesetzt (z.B. Marke + Cat1) → gilt für alle Artikel dieser Kombination</span>
         </div>
         <div style="display:grid;grid-template-columns:80px 1fr;padding:6px 10px;border-top:0.5px solid var(--border);background:#fff;">
           <span style="font-weight:700;color:var(--text);">P1 <span style="font-weight:400;color:var(--muted);">Catchall</span></span>
-          <span style="color:var(--text);">Kein Filter gesetzt → Fallback für alle Artikel ohne spezifischere Regel</span>
+          <span style="color:var(--text);">Genau 1 Filter gesetzt (z.B. nur Marke) → breiteste Regel, Fallback wenn keine spezifischere passt</span>
         </div>
         <div style="padding:6px 10px;border-top:0.5px solid var(--border);background:var(--accent-soft);color:var(--accent);font-size:10px;font-weight:600;">
           ⚡ Die spezifischste passende Regel gewinnt — bei Gleichstand höchste Prioritätszahl
@@ -1200,11 +1200,11 @@
 
     <!-- ── SCHRITT 2: FILTER ── -->
     <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1.1rem 1.25rem;margin-bottom:1rem;">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:10px;">2 — Filter <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;">(leer = gilt für alle)</span></div>
-      <div style="display:flex;flex-wrap:wrap;gap:16px;">
-        <div class="fg">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:10px;">2 — Filter <span id="filterHintLabel" style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;">(leer = gilt für alle)</span></div>
+      <div style="display:flex;flex-wrap:wrap;gap:12px;" id="stratFilterRow">
+        <div class="fg" id="sfSeasonWrap">
           <label>Season</label>
-          <select id="newSeason" style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;min-width:110px;">
+          <select id="newSeason" onchange="stratUpdateFilterState()" style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;min-width:100px;">
             <option value="alle">Alle</option>
             <option value="2026">2026</option>
             <option value="2025">2025</option>
@@ -1212,17 +1212,32 @@
             <option value="Aktion">Aktion</option>
           </select>
         </div>
-        <div class="fg">
+        <div class="fg" id="sfMarkeWrap">
           <label>Marke</label>
-          <input id="newMarke" type="text" placeholder="alle" value="alle"
-            style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;width:130px;">
+          <select id="newMarke" onchange="stratUpdateFilterState()" style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;min-width:120px;">
+            <option value="alle">Alle</option>
+          </select>
         </div>
-        <div class="fg">
-          <label>Warengruppe</label>
-          <input id="newWarengruppe" type="text" placeholder="z.B. Fahrradzubehör"
-            style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;width:150px;">
+        <div class="fg" id="sfCat1Wrap">
+          <label>Cat1</label>
+          <select id="newCat1" onchange="stratUpdateFilterState()" style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;min-width:120px;">
+            <option value="alle">Alle</option>
+          </select>
+        </div>
+        <div class="fg" id="sfCat2Wrap">
+          <label>Cat2</label>
+          <select id="newCat2" onchange="stratUpdateFilterState()" style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;min-width:120px;">
+            <option value="alle">Alle</option>
+          </select>
+        </div>
+        <div class="fg" id="sfCat3Wrap">
+          <label>Cat3</label>
+          <select id="newCat3" onchange="stratUpdateFilterState()" style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;min-width:120px;">
+            <option value="alle">Alle</option>
+          </select>
         </div>
       </div>
+      <div id="stratFilterWarning" style="display:none;margin-top:8px;font-size:11px;color:#c0392b;font-weight:600;"></div>
     </div>
 
     <!-- ── SCHRITT 3: STRATEGIE ── -->
@@ -1325,7 +1340,9 @@
               <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;width:70px;">Prio</th>
               <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;">Season</th>
               <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;">Marke</th>
-              <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;">Warengruppe</th>
+              <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;">Cat1</th>
+              <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;">Cat2</th>
+              <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;">Cat3</th>
               <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;width:180px;">Strategie</th>
               <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;width:100px;">Wert</th>
               <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#888;border-bottom:1.5px solid #e0ddd6;width:80px;">Max. Rab.</th>
@@ -1334,7 +1351,7 @@
             </tr>
           </thead>
           <tbody id="stratTableBody">
-            <tr><td colspan="9" style="padding:2rem;text-align:center;color:var(--muted);font-size:12px;">Noch keine Regeln — füge eine Regel hinzu oder lade eine CSV hoch</td></tr>
+            <tr><td colspan="11" style="padding:2rem;text-align:center;color:var(--muted);font-size:12px;">Noch keine Regeln — füge eine Regel hinzu oder lade eine CSV hoch</td></tr>
           </tbody>
         </table>
       </div>
@@ -1451,6 +1468,12 @@ var API_SOURCES = {
   cube:       GITHUB_BASE + 'shoptracker_cube.csv',
   fahrraeder: GITHUB_BASE + 'shoptracker_fahrraeder.csv',
   zubehoer:   GITHUB_BASE + 'shoptracker_zubehoer.csv'
+};
+
+// Cache für Filter-Werte pro Quelle (wird beim CSV-Laden befüllt)
+var filterValuesCache = {
+  fahrraeder: { brands:{}, cat1s:{}, cat2s:{}, cat3s:{}, seasons:{} },
+  zubehoer:   { brands:{}, cat1s:{}, cat2s:{}, cat3s:{}, seasons:{} }
 };
 
 
@@ -1835,6 +1858,19 @@ function updateDashboard(rows) {
   // ────────────────────────────────────────────────────────────
 
   DATA.table = tableRows;
+
+  // Filter-Werte für Strategien cachen (fahrraeder/zubehoer)
+  if (currentSource !== 'cube' && filterValuesCache[currentSource]) {
+    var fvc = { brands:{}, cat1s:{}, cat2s:{}, cat3s:{}, seasons:{} };
+    tableRows.forEach(function(r) {
+      if (r.brand)  fvc.brands[r.brand] = 1;
+      if (r.cat1)   fvc.cat1s[r.cat1]   = 1;
+      if (r.cat2)   fvc.cat2s[r.cat2]   = 1;
+      if (r.cat3)   fvc.cat3s[r.cat3]   = 1;
+      if (r.season && r.season !== 'alle') fvc.seasons[r.season] = 1;
+    });
+    filterValuesCache[currentSource] = fvc;
+  }
   currentPage = 1;
   currentFilter = 'all';
   // Filter zurücksetzen bei Quellenwechsel
@@ -2411,6 +2447,7 @@ function switchTab(name, btn) {
   document.getElementById('tab-' + name).classList.add('active');
   btn.classList.add('active');
   if (name === 'preisanpassungen') stratUpdateTableBtn();
+  if (name === 'einstellungen') setTimeout(stratPopulateFilterDropdowns, 300);
 }
 
 renderTable();
@@ -3175,12 +3212,15 @@ function stratSelectSource(btn, src) {
   if (sel) { sel.value = src; onSourceChange(src); }
   // Auto-load from Supabase
   supaLoadStrat(src, false);
+  // Filter-Dropdowns befüllen (leicht verzögert damit DATA.table geladen ist)
+  setTimeout(stratPopulateFilterDropdowns, 800);
 }
 
 function stratSetPrio(btn, prio) {
   document.querySelectorAll('.prio-btn').forEach(function(b) { b.classList.remove('active'); });
   btn.classList.add('active');
   stratCurrentPrio = prio;
+  stratUpdateFilterState();
 }
 
 function stratSetType(btn, type) {
@@ -3207,19 +3247,152 @@ function stratSrcLabel(src) {
   return src==='cube'?'Cube Fahrrad':src==='fahrraeder'?'Fahrräder':'Zubehör';
 }
 
+// Filter-Dropdowns mit Werten aus DATA.table befüllen
+function stratPopulateFilterDropdowns() {
+  var src = stratCurrentSrc;
+
+  function fillDropdowns(brands, cat1s, cat2s, cat3s, seasons) {
+    function fill(id, vals) {
+      var sel = document.getElementById(id);
+      if (!sel) return;
+      var cur = sel.value;
+      sel.innerHTML = '<option value="alle">Alle</option>';
+      Object.keys(vals).sort().forEach(function(v) {
+        if (v === 'alle') return;
+        var o = document.createElement('option');
+        o.value = v; o.textContent = v;
+        if (v === cur) o.selected = true;
+        sel.appendChild(o);
+      });
+    }
+    var fixedSeasons = {'2026':'2026','2025':'2025','2024':'2024','2023':'2023','Aktion':'Aktion'};
+    Object.keys(seasons).forEach(function(s){ fixedSeasons[s]=s; });
+    fill('newSeason', fixedSeasons);
+    fill('newMarke',  brands);
+    fill('newCat1',   cat1s);
+    fill('newCat2',   cat2s);
+    fill('newCat3',   cat3s);
+    stratUpdateFilterState();
+  }
+
+  // Cube hat keine Cat-Filter → nur Season anbieten
+  if (src === 'cube') {
+    fillDropdowns({}, {}, {}, {}, {});
+    return;
+  }
+
+  // Cache vorhanden und nicht leer → direkt nutzen
+  var cached = filterValuesCache[src];
+  if (cached && Object.keys(cached.brands).length > 0) {
+    fillDropdowns(cached.brands, cached.cat1s, cached.cat2s, cached.cat3s, cached.seasons);
+    return;
+  }
+
+  // Cache leer → Masterfeed laden (er enthält Marke + Cat1-3), dann CSV für Season/Marke
+  var url = API_SOURCES[src];
+  if (!url) return;
+
+  // Masterfeed zuerst sicherstellen
+  var mfPromise = masterfeedLoaded ? Promise.resolve() : loadMasterfeed();
+  mfPromise.then(function() {
+    fetch(url)
+      .then(function(r){ return r.text(); })
+      .then(function(text) {
+        var lines = text.replace(/^\uFEFF/,'').trim().split(/\r?\n/);
+        var sep = ';';
+        var headers = lines[0].split(sep).map(function(h){ return h.trim().replace(/^"|"$/g,''); });
+        var idxBrand = headers.indexOf('Marke');
+        var idxBezeichnung = headers.indexOf('Artikelbezeichnung');
+        var brands = {}, seasons = {}, skus = [];
+        for (var i = 1; i < lines.length; i++) {
+          var cols = lines[i].split(sep);
+          if (idxBrand >= 0 && cols[idxBrand] && cols[idxBrand].trim()) brands[cols[idxBrand].trim()] = 1;
+          if (idxBezeichnung >= 0) {
+            var bez = cols[idxBezeichnung] || '';
+            var sm = bez.match(/\b(20\d{2})\b/);
+            if (sm) seasons[sm[1]] = 1;
+            else if (/aktion/i.test(bez)) seasons['Aktion'] = 1;
+          }
+          // SKU für Masterfeed-Lookup
+          var idxSku = headers.indexOf('SKU');
+          if (idxSku >= 0 && cols[idxSku]) skus.push(cols[idxSku].trim().toUpperCase());
+        }
+        // Cat1/2/3 aus Masterfeed für diese SKUs
+        var cat1s = {}, cat2s = {}, cat3s = {};
+        skus.forEach(function(sku) {
+          var mf = masterfeedData[sku];
+          if (!mf) return;
+          if (mf.cat1) cat1s[mf.cat1] = 1;
+          if (mf.cat2) cat2s[mf.cat2] = 1;
+          if (mf.cat3) cat3s[mf.cat3] = 1;
+        });
+        filterValuesCache[src] = { brands:brands, cat1s:cat1s, cat2s:cat2s, cat3s:cat3s, seasons:seasons };
+        fillDropdowns(brands, cat1s, cat2s, cat3s, seasons);
+      })
+      .catch(function(e){ console.warn('Filter-Dropdown Fetch Fehler:', e); });
+  });
+}
+
+// Zählt wie viele Filter gesetzt (nicht 'alle') sind
+function stratCountFilters() {
+  var ids = ['newSeason','newMarke','newCat1','newCat2','newCat3'];
+  return ids.reduce(function(n, id) {
+    var el = document.getElementById(id);
+    return n + (el && el.value && el.value !== 'alle' ? 1 : 0);
+  }, 0);
+}
+
+// Aktualisiert Sichtbarkeit/State der Filter je nach Priorität
+function stratUpdateFilterState() {
+  var prio = stratCurrentPrio;
+  var ids  = ['newSeason','newMarke','newCat1','newCat2','newCat3'];
+  var cnt  = stratCountFilters();
+  var warn = document.getElementById('stratFilterWarning');
+  var hint = document.getElementById('filterHintLabel');
+
+  // P1: genau 0 Filter erlaubt (Catchall) — alle deaktivieren wenn schon 1 gesetzt
+  // P2: genau 2 Filter pflicht
+  // P3: genau 3 Filter pflicht (alle 5 verfügbar, min 3 müssen gesetzt sein)
+  // Wir erzwingen nicht die Deaktivierung, aber zeigen Warnungen
+
+  var required = prio; // P1=1, P2=2, P3=3
+  var labels = {1:'(P1 — genau 1 Filter setzen, gilt als Catchall)', 2:'(P2 — genau 2 Filter setzen)', 3:'(P3 — genau 3 Filter setzen)'};
+  if (hint) hint.textContent = labels[prio] || '';
+  if (warn) {
+    if (cnt !== required) {
+      warn.style.display = 'block';
+      warn.textContent = '⚠ P' + prio + ' erfordert genau ' + required + ' gesetzte Filter (aktuell: ' + cnt + ')';
+    } else {
+      warn.style.display = 'none';
+    }
+  }
+}
+
 function stratAddRule() {
-  var season = document.getElementById('newSeason').value || 'alle';
-  var marke  = (document.getElementById('newMarke').value||'alle').trim();
-  var wg     = (document.getElementById('newWarengruppe').value||'').trim();
+  var prio   = stratCurrentPrio;
+  var season = document.getElementById('newSeason') ? document.getElementById('newSeason').value : 'alle';
+  var marke  = document.getElementById('newMarke')  ? document.getElementById('newMarke').value  : 'alle';
+  var cat1   = document.getElementById('newCat1')   ? document.getElementById('newCat1').value   : 'alle';
+  var cat2   = document.getElementById('newCat2')   ? document.getElementById('newCat2').value   : 'alle';
+  var cat3   = document.getElementById('newCat3')   ? document.getElementById('newCat3').value   : 'alle';
   var strat  = stratCurrentType;
   var wert   = parseFloat(document.getElementById('newWert') ? document.getElementById('newWert').value : '0') || 0;
   var minPct = parseFloat(document.getElementById('newMinPct') ? document.getElementById('newMinPct').value : '20') || 20;
   var maxPct = parseFloat(document.getElementById('newMaxPct') ? document.getElementById('newMaxPct').value : '35') || 35;
   var maxRab = parseFloat(document.getElementById('newMaxRabatt') ? document.getElementById('newMaxRabatt').value : '30') || 30;
 
+  // Pflicht-Validierung je nach Priorität
+  var cnt = [season,marke,cat1,cat2,cat3].filter(function(v){ return v && v !== 'alle'; }).length;
+  if (cnt !== prio) {
+    stratShowBanner('P' + prio + ' erfordert genau ' + prio + ' gesetzte Filter (aktuell: ' + cnt + ').', 'error');
+    return;
+  }
+
   var rule = {
-    prioritaet: stratCurrentPrio,
-    season: season, marke: marke, warengruppe: wg,
+    prioritaet: prio,
+    season: season, marke: marke,
+    cat1: cat1, cat2: cat2, cat3: cat3,
+    warengruppe: '',   // legacy, leer lassen
     strategie: strat, wert: wert,
     min_pct: minPct, max_pct: maxPct,
     max_rabatt_pct: maxRab, aktiv: true
@@ -3254,7 +3427,7 @@ function stratRenderTable() {
   var cntEl = document.getElementById('stratRuleCount');
   if (!tbody) return;
   if (!rules||!rules.length) {
-    tbody.innerHTML = '<tr><td colspan="9" style="padding:2rem;text-align:center;color:var(--muted);font-size:12px;">Noch keine Regeln für '+stratSrcLabel(stratCurrentSrc)+'</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" style="padding:2rem;text-align:center;color:var(--muted);font-size:12px;">Noch keine Regeln für '+stratSrcLabel(stratCurrentSrc)+'</td></tr>';
     if(cntEl) cntEl.textContent=''; return;
   }
   if(cntEl) cntEl.textContent = rules.length+' Regeln';
@@ -3287,16 +3460,18 @@ function stratRenderTable() {
     tr.innerHTML =
       '<td style="padding:9px 12px;"><span style="background:'+(pBg[r.prioritaet]||'#eee')+';color:'+(pClr[r.prioritaet]||'#555')+';font-size:11px;font-weight:700;padding:2px 9px;border-radius:99px;">P'+r.prioritaet+'</span></td>'+
       '<td style="padding:9px 12px;font-size:12px;">'+(r.season&&r.season!=='alle'?'<b>'+r.season+'</b>':'<span style="color:#aaa">alle</span>')+'</td>'+
-      '<td style="padding:9px 12px;font-size:12px;">'+(r.marke&&r.marke!=='alle'?'<b>'+r.marke+'</b>':'<span style="color:#aaa">alle</span>')+'</td>'+
-      '<td style="padding:9px 12px;font-size:12px;">'+(r.warengruppe?'<b>'+r.warengruppe+'</b>':'<span style="color:#aaa">—</span>')+'</td>'+
+      '<td style="padding:9px 12px;font-size:12px;">'+(r.marke&&r.marke!=='alle'?'<b>'+r.marke+'</b>':'<span style="color:#aaa">—</span>')+'</td>'+
+      '<td style="padding:9px 12px;font-size:12px;">'+(r.cat1&&r.cat1!=='alle'?'<b>'+r.cat1+'</b>':'<span style="color:#aaa">—</span>')+'</td>'+
+      '<td style="padding:9px 12px;font-size:12px;">'+(r.cat2&&r.cat2!=='alle'?'<b>'+r.cat2+'</b>':'<span style="color:#aaa">—</span>')+'</td>'+
+      '<td style="padding:9px 12px;font-size:12px;">'+(r.cat3&&r.cat3!=='alle'?'<b>'+r.cat3+'</b>':'<span style="color:#aaa">—</span>')+'</td>'+
       '<td style="padding:9px 12px;"><span style="background:var(--surface2);font-size:11px;font-weight:500;padding:3px 9px;border-radius:99px;">'+(labels[r.strategie]||r.strategie)+'</span></td>'+
       '<td style="padding:9px 12px;font-family:monospace;font-size:12px;font-weight:600;">'+wertStr+'</td>'+
       '<td style="padding:9px 12px;font-size:12px;color:#888;">'+(r.max_rabatt_pct?r.max_rabatt_pct+'%':'—')+'</td>'+
       '<td style="padding:9px 12px;text-align:center;"></td>'+
       '<td style="padding:9px 12px;text-align:center;"></td>';
     var cells = tr.querySelectorAll('td');
-    cells[7].appendChild(toggleBtn);
-    cells[8].appendChild(delBtn);
+    cells[9].appendChild(toggleBtn);
+    cells[10].appendChild(delBtn);
     return tr.outerHTML;
   }).join('');
 }
@@ -3322,6 +3497,9 @@ function stratCalcZielpreis(row, rules) {
   var uvp          = (!isNaN(row.uvp) && row.uvp > 0) ? row.uvp : (row.hoechster || NaN);
   var season       = row.season || ((row.name||'').match(/\b(20\d{2})\b/)||['',''])[1] || 'Aktion';
   var marke        = (row.brand||'').toLowerCase();
+  var cat1         = (row.cat1||'').toLowerCase();
+  var cat2         = (row.cat2||'').toLowerCase();
+  var cat3         = (row.cat3||'').toLowerCase();
   var wg           = (row.warengruppe||'').toLowerCase();
   var baseCheapest = (!isNaN(row.niedrigster) && row.niedrigster > 0) ? row.niedrigster : cheapest;
 
@@ -3330,18 +3508,24 @@ function stratCalcZielpreis(row, rules) {
   // Spezifität berechnen: Anzahl gesetzter Filter (Season + Marke + WG)
   function specificity(r) {
     var s = 0;
-    if (r.season     && r.season     !== 'alle') s++;
-    if (r.marke      && r.marke      !== 'alle' && r.marke      !== '') s++;
+    if (r.season && r.season !== 'alle') s++;
+    if (r.marke  && r.marke  !== 'alle' && r.marke  !== '') s++;
+    if (r.cat1   && r.cat1   !== 'alle' && r.cat1   !== '') s++;
+    if (r.cat2   && r.cat2   !== 'ale'  && r.cat2   !== '') s++;
+    if (r.cat3   && r.cat3   !== 'alle' && r.cat3   !== '') s++;
     if (r.warengruppe && r.warengruppe !== 'alle' && r.warengruppe !== '') s++;
     return s;
   }
 
   // Passende Regeln finden (alle die matchen)
   var matched = active.filter(function(r) {
-    var ms = !r.season      || r.season      === 'alle' || r.season === season;
-    var mm = !r.marke       || r.marke       === 'alle' || r.marke === '' || marke.indexOf(r.marke.toLowerCase()) > -1;
-    var mw = !r.warengruppe || r.warengruppe === 'alle' || r.warengruppe === '' || wg.indexOf(r.warengruppe.toLowerCase()) > -1;
-    return ms && mm && mw;
+    var ms  = !r.season || r.season === 'alle' || r.season === season;
+    var mm  = !r.marke  || r.marke  === 'alle' || r.marke  === '' || marke.indexOf(r.marke.toLowerCase()) > -1;
+    var mc1 = !r.cat1   || r.cat1   === 'alle' || r.cat1   === '' || cat1.indexOf(r.cat1.toLowerCase()) > -1;
+    var mc2 = !r.cat2   || r.cat2   === 'alle' || r.cat2   === '' || cat2.indexOf(r.cat2.toLowerCase()) > -1;
+    var mc3 = !r.cat3   || r.cat3   === 'alle' || r.cat3   === '' || cat3.indexOf(r.cat3.toLowerCase()) > -1;
+    var mw  = !r.warengruppe || r.warengruppe === 'alle' || r.warengruppe === '' || wg.indexOf(r.warengruppe.toLowerCase()) > -1;
+    return ms && mm && mc1 && mc2 && mc3 && mw;
   });
 
   if (!matched.length) return null;
@@ -3730,6 +3914,9 @@ function supaLoadStrat(src, showBanner) {
           prioritaet:     r.prioritaet || 1,
           season:         r.season || 'alle',
           marke:          r.marke  || 'alle',
+          cat1:           r.cat1   || 'alle',
+          cat2:           r.cat2   || 'alle',
+          cat3:           r.cat3   || 'alle',
           warengruppe:    r.warengruppe || '',
           strategie:      r.strategie || '',
           wert:           r.wert || 0,
@@ -3758,14 +3945,18 @@ function supaLoadStrat(src, showBanner) {
 // Save all rules for current source to Supabase
 function supaSaveStrat(src) {
   var rules = stratData[src] || [];
-  if (!rules.length) {
-    stratShowBanner('Keine Regeln zum Speichern — bitte zuerst Regeln hinzufügen.', 'warning');
-    return;
-  }
-  stratShowBanner('Speichere ' + rules.length + ' Regeln…', 'info');
+  // Auch leere Regelliste speichern → löscht alle Regeln in der DB
+  stratShowBanner(rules.length ? 'Speichere ' + rules.length + ' Regeln…' : 'Lösche alle Regeln aus Datenbank…', 'info');
   // 1. Delete existing rules for this source
   supaFetch('DELETE', 'preisstrategien?datenquelle=eq.' + src)
     .then(function() {
+      if (!rules.length) {
+        stratData[src] = [];
+        stratSave();
+        stratRenderTable();
+        stratShowBanner('✓ Alle Regeln gelöscht.', 'success');
+        return;
+      }
       // 2. Insert all current rules one by one to avoid array issues
       var inserts = rules.map(function(r) {
         return {
@@ -3773,6 +3964,9 @@ function supaSaveStrat(src) {
           prioritaet:     r.prioritaet,
           season:         r.season || 'alle',
           marke:          r.marke  || 'alle',
+          cat1:           r.cat1   || 'alle',
+          cat2:           r.cat2   || 'alle',
+          cat3:           r.cat3   || 'alle',
           warengruppe:    r.warengruppe || '',
           strategie:      r.strategie,
           wert:           r.wert || 0,
@@ -3928,6 +4122,21 @@ function loadMasterfeed() {
         }
       }
       populateCatFilters();
+      // filterValuesCache mit cat1/2/3 aus Masterfeed aktualisieren
+      ['fahrraeder','zubehoer'].forEach(function(src) {
+        var fvc = filterValuesCache[src];
+        if (!fvc) return;
+        Object.values(masterfeedData).forEach(function(mf) {
+          if (mf.cat1) fvc.cat1s[mf.cat1] = 1;
+          if (mf.cat2) fvc.cat2s[mf.cat2] = 1;
+          if (mf.cat3) fvc.cat3s[mf.cat3] = 1;
+        });
+      });
+      // Strategie-Dropdowns neu befüllen falls Einstellungen-Tab aktiv
+      if (document.getElementById('tab-einstellungen') &&
+          document.getElementById('tab-einstellungen').classList.contains('active')) {
+        stratPopulateFilterDropdowns();
+      }
     })
     .catch(function(e) { console.warn('Masterfeed konnte nicht geladen werden:', e); });
 }
