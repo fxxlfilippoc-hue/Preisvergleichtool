@@ -1200,10 +1200,10 @@
 
     <!-- ── SCHRITT 2: FILTER ── -->
     <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1.1rem 1.25rem;margin-bottom:1rem;">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:10px;">2 — Filter <span id="filterHintLabel" style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;">(leer = gilt für alle)</span></div>
-      <div style="display:flex;flex-wrap:wrap;gap:12px;" id="stratFilterRow">
-        <div class="fg" id="sfSeasonWrap">
-          <label>Season</label>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:12px;">2 — Filter <span id="filterHintLabel" style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;">(leer = gilt für alle)</span></div>
+      <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;">
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);">Season</label>
           <select id="newSeason" onchange="stratUpdateFilterState()" style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;min-width:100px;">
             <option value="alle">Alle</option>
             <option value="2026">2026</option>
@@ -1212,27 +1212,15 @@
             <option value="Aktion">Aktion</option>
           </select>
         </div>
-        <div class="fg" id="sfMarkeWrap">
-          <label>Marke</label>
-          <select id="newMarke" onchange="stratUpdateFilterState()" style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;min-width:120px;">
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);">Marke</label>
+          <select id="newMarke" onchange="stratUpdateFilterState()" style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;min-width:140px;">
             <option value="alle">Alle</option>
           </select>
         </div>
-        <div class="fg" id="sfCat1Wrap">
-          <label>Cat1</label>
-          <select id="newCat1" onchange="stratUpdateFilterState()" style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;min-width:120px;">
-            <option value="alle">Alle</option>
-          </select>
-        </div>
-        <div class="fg" id="sfCat2Wrap">
-          <label>Cat2</label>
-          <select id="newCat2" onchange="stratUpdateFilterState()" style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;min-width:120px;">
-            <option value="alle">Alle</option>
-          </select>
-        </div>
-        <div class="fg" id="sfCat3Wrap">
-          <label>Cat3</label>
-          <select id="newCat3" onchange="stratUpdateFilterState()" style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;min-width:120px;">
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);">Cat2</label>
+          <select id="newCat2" onchange="stratUpdateFilterState()" style="font-family:'DM Sans',sans-serif;font-size:12px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;background:var(--surface);color:var(--text);outline:none;min-width:140px;">
             <option value="alle">Alle</option>
           </select>
         </div>
@@ -1533,11 +1521,13 @@ function onSourceChange(source) {
         if (masterfeedLoaded) {
           enrichTableWithMasterfeed();
           populateCatFilters();
+          stratPopulateFilterDropdowns();
           renderTable();
         } else {
           loadMasterfeed().then(function() {
             enrichTableWithMasterfeed();
             populateCatFilters();
+            stratPopulateFilterDropdowns();
             renderTable();
           });
         }
@@ -3246,14 +3236,12 @@ function stratSrcLabel(src) {
 
 // Filter-Dropdowns mit Werten aus DATA.table befüllen
 function stratPopulateFilterDropdowns() {
-  var src = stratCurrentSrc;
-
   function fill(id, vals) {
     var sel = document.getElementById(id);
     if (!sel) return;
     var cur = sel.value;
     sel.innerHTML = '<option value="alle">Alle</option>';
-    vals.sort().forEach(function(v) {
+    Object.keys(vals).sort().forEach(function(v) {
       if (!v || v === 'alle') return;
       var o = document.createElement('option');
       o.value = v; o.textContent = v;
@@ -3262,51 +3250,36 @@ function stratPopulateFilterDropdowns() {
     });
   }
 
-  function doFill() {
-    var cached = filterValuesCache[src];
-    var brands = cached ? Object.keys(cached.brands) : [];
-    var cat1s  = cached ? Object.keys(cached.cat1s)  : [];
-    var cat2s  = cached ? Object.keys(cached.cat2s)  : [];
-    var cat3s  = cached ? Object.keys(cached.cat3s)  : [];
-    var seasons = ['2026','2025','2024','2023','2022','Aktion'];
-    if (cached) Object.keys(cached.seasons).forEach(function(s){ if (seasons.indexOf(s)<0) seasons.push(s); });
+  var brands = {}, cat2s = {}, seasons = {};
+  (DATA.table || []).forEach(function(r) {
+    if (r.brand)  brands[r.brand] = 1;
+    if (r.cat2)   cat2s[r.cat2]   = 1;
+    if (r.season && r.season !== 'alle') seasons[r.season] = 1;
+  });
 
-    // Aus Masterfeed befüllen wenn Cache leer
-    if (!brands.length && masterfeedLoaded) {
-      var b={}, c1={}, c2={}, c3={};
-      Object.values(masterfeedData).forEach(function(mf) {
-        if (mf.brand) b[mf.brand] = 1;
-        if (mf.cat1 && mf.cat1.length < 60) c1[mf.cat1] = 1;
-        if (mf.cat2 && mf.cat2.length < 60) c2[mf.cat2] = 1;
-        if (mf.cat3 && mf.cat3.length < 60) c3[mf.cat3] = 1;
-      });
-      brands = Object.keys(b);
-      cat1s  = Object.keys(c1);
-      cat2s  = Object.keys(c2);
-      cat3s  = Object.keys(c3);
-      filterValuesCache[src] = { brands:b, cat1s:c1, cat2s:c2, cat3s:c3, seasons:{} };
-    }
-
-    fill('newSeason', seasons);
-    fill('newMarke',  brands);
-    fill('newCat1',   cat1s);
-    fill('newCat2',   cat2s);
-    fill('newCat3',   cat3s);
-    stratUpdateFilterState();
+  fill('newMarke',  brands);
+  fill('newCat2',   cat2s);
+  // Season: statische Werte + aus DATA.table
+  var seasonSel = document.getElementById('newSeason');
+  if (seasonSel) {
+    var curSeason = seasonSel.value;
+    var fixedSeasons = ['2026','2025','2024','2023','2022','Aktion'];
+    Object.keys(seasons).forEach(function(s){ if (fixedSeasons.indexOf(s) < 0) fixedSeasons.push(s); });
+    seasonSel.innerHTML = '<option value="alle">Alle</option>';
+    fixedSeasons.sort().forEach(function(v) {
+      var o = document.createElement('option');
+      o.value = v; o.textContent = v;
+      if (v === curSeason) o.selected = true;
+      seasonSel.appendChild(o);
+    });
   }
 
-  if (src === 'cube') { doFill(); return; }
-
-  if (masterfeedLoaded) {
-    doFill();
-  } else {
-    loadMasterfeed().then(doFill);
-  }
+  stratUpdateFilterState();
 }
 
 // Zählt wie viele Filter gesetzt (nicht 'alle') sind
 function stratCountFilters() {
-  var ids = ['newSeason','newMarke','newCat1','newCat2','newCat3'];
+  var ids = ['newSeason','newMarke','newCat2'];
   return ids.reduce(function(n, id) {
     var el = document.getElementById(id);
     return n + (el && el.value && el.value !== 'alle' ? 1 : 0);
@@ -3343,9 +3316,7 @@ function stratAddRule() {
   var prio   = stratCurrentPrio;
   var season = document.getElementById('newSeason') ? document.getElementById('newSeason').value : 'alle';
   var marke  = document.getElementById('newMarke')  ? document.getElementById('newMarke').value  : 'alle';
-  var cat1   = document.getElementById('newCat1')   ? document.getElementById('newCat1').value   : 'alle';
   var cat2   = document.getElementById('newCat2')   ? document.getElementById('newCat2').value   : 'alle';
-  var cat3   = document.getElementById('newCat3')   ? document.getElementById('newCat3').value   : 'alle';
   var strat  = stratCurrentType;
   var wert   = parseFloat(document.getElementById('newWert') ? document.getElementById('newWert').value : '0') || 0;
   var minPct = parseFloat(document.getElementById('newMinPct') ? document.getElementById('newMinPct').value : '20') || 20;
@@ -3353,7 +3324,7 @@ function stratAddRule() {
   var maxRab = parseFloat(document.getElementById('newMaxRabatt') ? document.getElementById('newMaxRabatt').value : '30') || 30;
 
   // Pflicht-Validierung je nach Priorität
-  var cnt = [season,marke,cat1,cat2,cat3].filter(function(v){ return v && v !== 'alle'; }).length;
+  var cnt = [season,marke,cat2].filter(function(v){ return v && v !== 'alle'; }).length;
   if (cnt !== prio) {
     stratShowBanner('P' + prio + ' erfordert genau ' + prio + ' gesetzte Filter (aktuell: ' + cnt + ').', 'error');
     return;
@@ -3362,8 +3333,8 @@ function stratAddRule() {
   var rule = {
     prioritaet: prio,
     season: season, marke: marke,
-    cat1: cat1, cat2: cat2, cat3: cat3,
-    warengruppe: '',   // legacy, leer lassen
+    cat1: 'alle', cat2: cat2, cat3: 'alle',
+    warengruppe: '',
     strategie: strat, wert: wert,
     min_pct: minPct, max_pct: maxPct,
     max_rabatt_pct: maxRab, aktiv: true
@@ -3971,10 +3942,12 @@ var masterfeedData = {}; // SKU → product object
 var masterfeedLoaded = false;
 var masterfeedCat1 = [], masterfeedCat2 = [], masterfeedCat3 = [], masterfeedCat4 = [];
 
+var masterfeedPromise = null;
 function loadMasterfeed() {
   if (masterfeedLoaded) return Promise.resolve();
+  if (masterfeedPromise) return masterfeedPromise;
   console.log('[Masterfeed] Lade von:', MASTERFEED_URL);
-  return fetch(MASTERFEED_URL)
+  masterfeedPromise = fetch(MASTERFEED_URL)
     .then(function(r) { 
       console.log('[Masterfeed] HTTP Status:', r.status);
       return r.text(); 
@@ -4093,6 +4066,7 @@ function loadMasterfeed() {
         }
       }
       populateCatFilters();
+      stratPopulateFilterDropdowns();
       // filterValuesCache mit cat1/2/3 aus Masterfeed aktualisieren
       ['fahrraeder','zubehoer'].forEach(function(src) {
         var fvc = filterValuesCache[src];
@@ -4110,6 +4084,7 @@ function loadMasterfeed() {
       }
     })
     .catch(function(e) { console.warn('Masterfeed konnte nicht geladen werden:', e); });
+  return masterfeedPromise;
 }
 
 // CSV parser for pipe-separated files
