@@ -1654,7 +1654,10 @@ function updateDashboard(rows) {
         cleanName = cleanName.slice(brand.length).trim();
       }
       // Season aus Artikelbezeichnung extrahieren
-      var seasonMatch = rawName.match(/\b(20\d{2})\b/);
+      // Season: "Modell 20XX" oder "MY 20XX" bevorzugen, sonst letztes 20XX im String
+      var seasonMatch = rawName.match(/(?:Modell|MY)\s+(20\d{2})\b/i) ||
+                        rawName.match(/(20(?:2[0-9]|1[5-9]))\s*$/) ||
+                        rawName.match(/\b(20(?:2[0-9]|1[5-9]))\b/);
       var rowSeason = seasonMatch ? seasonMatch[1] : (/aktion/i.test(rawName) ? 'Aktion' : '');
       tableRows.push({
         sku:               sku,
@@ -2061,8 +2064,7 @@ function renderTable() {
   tbody.innerHTML = rows.map(function(r, ri) {
     var td   = 'padding:7px 12px;vertical-align:middle;border-bottom:0.5px solid #e8e6e0;font-size:13px;color:#1A1A18;';
     var mono = td + 'font-family:monospace;';
-    var seasonMatch = (r.name||'').match(/\b(20\d{2})\b/);
-    var season = r.season || (seasonMatch ? seasonMatch[1] : (/aktion/i.test(r.name||'') ? 'Aktion' : ''));
+    var season = r.season || (function(n){ var m=n.match(/(?:Modell|MY)\s+(20\d{2})\b/i)||n.match(/(20(?:2[0-9]|1[5-9]))\s*$/)||n.match(/\b(20(?:2[0-9]|1[5-9]))\b/); return m?m[1]:(/aktion/i.test(n)?'Aktion':''); })(r.name||'');
     var niedrig   = !isNaN(r.niedrigster) && r.niedrigster > 0 ? r.niedrigster : r.cheapest_price;
     var idx       = (!isNaN(r.my_price) && !isNaN(niedrig) && niedrig > 0) ? r.my_price / niedrig * 100 : null;
     var idxColor  = idx===null ? '#888' : idx>105 ? '#c0392b' : idx<97 ? '#1a7a3f' : '#1A1A18';
@@ -3437,7 +3439,7 @@ function stratCalcZielpreis(row, rules) {
   var myPrice      = row.my_price;
   var cheapest     = row.cheapest_price;
   var uvp          = (!isNaN(row.uvp) && row.uvp > 0) ? row.uvp : (row.hoechster || NaN);
-  var season       = row.season || ((row.name||'').match(/\b(20\d{2})\b/)||['',''])[1] || 'Aktion';
+  var season       = row.season || (function(n){ var m=n.match(/(?:Modell|MY)\s+(20\d{2})\b/i)||n.match(/(20(?:2[0-9]|1[5-9]))\s*$/)||n.match(/\b(20(?:2[0-9]|1[5-9]))\b/); return m?m[1]:(/aktion/i.test(n)?'Aktion':''); })(row.name||'');
   var marke        = (row.brand||'').toLowerCase();
   var cat1         = (row.cat1||'').toLowerCase();
   var cat2         = (row.cat2||'').toLowerCase();
@@ -3636,7 +3638,7 @@ function downloadNormalExcel() {
   if (!filtered.length) { showToast('Keine Daten zum Exportieren.', true); return; }
   var rows = [['SKU (Artikelnummer)','Produktname','Marke','Season','Mein Preis','Mein Rabatt %','Ø Markt','Niedrigster','Günstigster Anbieter','Höchster','Preisindex %','Zielpreis','Rabatt (Ziel) %','Potenzial','UVP','Bestand','Anzahl Shops','Position']];
   filtered.forEach(function(r) {
-    var sm = (r.name||'').match(/\b(20\d{2})\b/);
+    var sm = (r.name||'').match(/(?:Modell|MY)\s+(20\d{2})\b/i) || (r.name||'').match(/(20(?:2[0-9]|1[5-9]))\b/);
     var season = sm ? sm[1] : (/aktion/i.test(r.name||'') ? 'Aktion' : '');
     var niedrig = !isNaN(r.niedrigster) && r.niedrigster > 0 ? r.niedrigster : r.cheapest_price;
     var idx = (!isNaN(r.my_price) && !isNaN(niedrig) && niedrig > 0) ? +(r.my_price / niedrig * 100).toFixed(1) : '';
