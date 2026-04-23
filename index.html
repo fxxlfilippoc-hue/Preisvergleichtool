@@ -1176,6 +1176,26 @@
         <b style="color:var(--text);">P2</b> = gilt für eine Season oder Marke ·
         <b style="color:var(--text);">P3</b> = gilt für Season + Marke + Warengruppe · Höchste passende Priorität gewinnt
       </div>
+      <div style="margin-top:10px;border:0.5px solid var(--border);border-radius:var(--radius);overflow:hidden;font-size:11px;">
+        <div style="background:var(--bg);padding:6px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);display:grid;grid-template-columns:80px 1fr;">
+          <span>Priorität</span><span>Greift wenn…</span>
+        </div>
+        <div style="display:grid;grid-template-columns:80px 1fr;padding:6px 10px;border-top:0.5px solid var(--border);background:#fff;">
+          <span style="font-weight:700;color:var(--text);">P3 <span style="font-weight:400;color:var(--muted);">Spezifisch</span></span>
+          <span style="color:var(--text);">Season + Marke + Warengruppe alle gesetzt → gilt nur für diese exakte Kombination</span>
+        </div>
+        <div style="display:grid;grid-template-columns:80px 1fr;padding:6px 10px;border-top:0.5px solid var(--border);background:#fafaf8;">
+          <span style="font-weight:700;color:var(--text);">P2 <span style="font-weight:400;color:var(--muted);">Semi</span></span>
+          <span style="color:var(--text);">Eine oder zwei Bedingungen gesetzt (z.B. nur Marke) → gilt für alle Artikel dieser Marke</span>
+        </div>
+        <div style="display:grid;grid-template-columns:80px 1fr;padding:6px 10px;border-top:0.5px solid var(--border);background:#fff;">
+          <span style="font-weight:700;color:var(--text);">P1 <span style="font-weight:400;color:var(--muted);">Catchall</span></span>
+          <span style="color:var(--text);">Kein Filter gesetzt → Fallback für alle Artikel ohne spezifischere Regel</span>
+        </div>
+        <div style="padding:6px 10px;border-top:0.5px solid var(--border);background:var(--accent-soft);color:var(--accent);font-size:10px;font-weight:600;">
+          ⚡ Die spezifischste passende Regel gewinnt — bei Gleichstand höchste Prioritätszahl
+        </div>
+      </div>
     </div>
 
     <!-- ── SCHRITT 2: FILTER ── -->
@@ -3297,56 +3317,75 @@ function stratShowBanner(msg, type) {
 }
 
 function stratCalcZielpreis(row, rules) {
-  var myPrice  = row.my_price;
-  var cheapest = row.cheapest_price;
-  var uvp      = (!isNaN(row.uvp) && row.uvp > 0) ? row.uvp : (row.hoechster || NaN);
-  var season   = ((row.name||'').match(/\b(20\d{2})\b/)||['',''])[1]||'Aktion';
-  var marke    = row.brand||'';
-  var wg       = row.warengruppe||'';
-  var baseCheapest = (!isNaN(row.niedrigster)&&row.niedrigster>0)?row.niedrigster:cheapest;
-  var active   = rules.filter(function(r){return r.aktiv;});
-  active.sort(function(a,b){return b.prioritaet-a.prioritaet;});
-  var matched  = null;
-  for(var i=0;i<active.length;i++){
-    var r=active[i];
-    var ms=!r.season||r.season==='alle'||r.season===season;
-    var mm=!r.marke||r.marke==='alle'||marke.toLowerCase().indexOf(r.marke.toLowerCase())>-1;
-    var mw=!r.warengruppe||r.warengruppe==='alle'||wg.toLowerCase().indexOf(r.warengruppe.toLowerCase())>-1;
-    if(ms&&mm&&mw){matched=r;break;}
-  }
-  if(!matched) return null;
+  var myPrice      = row.my_price;
+  var cheapest     = row.cheapest_price;
+  var uvp          = (!isNaN(row.uvp) && row.uvp > 0) ? row.uvp : (row.hoechster || NaN);
+  var season       = row.season || ((row.name||'').match(/\b(20\d{2})\b/)||['',''])[1] || 'Aktion';
+  var marke        = (row.brand||'').toLowerCase();
+  var wg           = (row.warengruppe||'').toLowerCase();
+  var baseCheapest = (!isNaN(row.niedrigster) && row.niedrigster > 0) ? row.niedrigster : cheapest;
 
-  // min_max strategy
-  // min_pct = Min Preis = niedrigster Zielpreis (größerer Rabatt)
-  // max_pct = Max Preis = höchster Zielpreis (kleinerer Rabatt)
-  if(matched.strategie==='min_max'){
-    if(isNaN(uvp)||uvp<=0) return null;
-    var minPrice = uvp*(1-matched.min_pct/100);  // Min Preis = niedrigster erlaubter Preis
-    var maxPrice = uvp*(1-matched.max_pct/100);  // Max Preis = höchster erlaubter Preis
-    if(isNaN(baseCheapest)||baseCheapest<=0) return Math.floor(maxPrice)+0.99;
-    var target = baseCheapest - 10;
-    target = Math.max(target, minPrice);
-    target = Math.min(target, maxPrice);
-    return Math.round((Math.floor(target)+0.99)*100)/100;
+  var active = rules.filter(function(r){ return r.aktiv; });
+
+  // Spezifität berechnen: Anzahl gesetzter Filter (Season + Marke + WG)
+  function specificity(r) {
+    var s = 0;
+    if (r.season     && r.season     !== 'alle') s++;
+    if (r.marke      && r.marke      !== 'alle' && r.marke      !== '') s++;
+    if (r.warengruppe && r.warengruppe !== 'alle' && r.warengruppe !== '') s++;
+    return s;
   }
 
-  if(isNaN(baseCheapest)||baseCheapest<=0) return null;
-  var minAllowed=(!isNaN(uvp)&&uvp>0)?uvp*(1-matched.max_rabatt_pct/100):0;
-  var raw=null;
-  switch(matched.strategie){
-    case 'markt_minus_x':        raw=baseCheapest-matched.wert; break;
-    case 'markt_minus_pct':      raw=baseCheapest*(1-matched.wert/100); break;
-    case 'uvp_minus_rabatt':     if(!isNaN(uvp)&&uvp>0) raw=uvp*(1-matched.wert/100); break;
-    case 'günstigster_plus_x':   raw=baseCheapest+matched.wert; break;
-    case 'günstigster_plus_pct': raw=baseCheapest*(1+matched.wert/100); break;
-    case 'zielposition':         raw=baseCheapest-(matched.wert<=1?10:0); break;
-    default: return null;
+  // Passende Regeln finden (alle die matchen)
+  var matched = active.filter(function(r) {
+    var ms = !r.season      || r.season      === 'alle' || r.season === season;
+    var mm = !r.marke       || r.marke       === 'alle' || r.marke === '' || marke.indexOf(r.marke.toLowerCase()) > -1;
+    var mw = !r.warengruppe || r.warengruppe === 'alle' || r.warengruppe === '' || wg.indexOf(r.warengruppe.toLowerCase()) > -1;
+    return ms && mm && mw;
+  });
+
+  if (!matched.length) return null;
+
+  // Höchste Spezifität gewinnt, bei Gleichstand höchste Priorität
+  matched.sort(function(a, b) {
+    var sd = specificity(b) - specificity(a);
+    if (sd !== 0) return sd;
+    return b.prioritaet - a.prioritaet;
+  });
+
+  var rule = matched[0];
+
+  function calcFromRule(r) {
+    if (r.strategie === 'min_max') {
+      if (isNaN(uvp) || uvp <= 0) return null;
+      var minPrice = uvp * (1 - r.min_pct / 100);
+      var maxPrice = uvp * (1 - r.max_pct / 100);
+      if (isNaN(baseCheapest) || baseCheapest <= 0) return Math.floor(maxPrice) + 0.99;
+      var target = baseCheapest - 0.01;
+      target = Math.max(target, minPrice);
+      target = Math.min(target, maxPrice);
+      return Math.round((Math.floor(target) + 0.99) * 100) / 100;
+    }
+    if (isNaN(baseCheapest) || baseCheapest <= 0) return null;
+    var minAllowed = (!isNaN(uvp) && uvp > 0 && r.max_rabatt_pct) ? uvp * (1 - r.max_rabatt_pct / 100) : 0;
+    var raw = null;
+    switch (r.strategie) {
+      case 'markt_minus_x':        raw = baseCheapest - r.wert; break;
+      case 'markt_minus_pct':      raw = baseCheapest * (1 - r.wert / 100); break;
+      case 'uvp_minus_rabatt':     if (!isNaN(uvp) && uvp > 0) raw = uvp * (1 - r.wert / 100); break;
+      case 'günstigster_plus_x':   raw = baseCheapest + r.wert; break;
+      case 'günstigster_plus_pct': raw = baseCheapest * (1 + r.wert / 100); break;
+      case 'zielposition':         raw = baseCheapest - 0.01; break;
+      default: return null;
+    }
+    if (raw === null || isNaN(raw)) return null;
+    raw = Math.floor(raw) + 0.99;
+    if (raw < minAllowed) raw = Math.floor(minAllowed) + 0.99;
+    if (!isNaN(uvp) && uvp > 0 && raw > uvp) raw = uvp;
+    return Math.round(raw * 100) / 100;
   }
-  if(raw===null||isNaN(raw)) return null;
-  raw=Math.floor(raw)+0.99;
-  if(raw<minAllowed) raw=Math.floor(minAllowed)+0.99;
-  if(!isNaN(uvp)&&uvp>0&&raw>uvp) raw=uvp;
-  return Math.round(raw*100)/100;
+
+  return calcFromRule(rule);
 }
 
 function stratApply() {
